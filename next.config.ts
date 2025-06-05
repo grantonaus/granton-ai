@@ -1,7 +1,13 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  /* config options here */
+// next.config.js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  experimental: {
+    serverComponentsExternalPackages: ['pdf-parse'],
+    // This setting raises the limit for Server Actions / API routes
+    serverActions: {
+      bodySizeLimit: '20mb', // or however large you expect your PDFs to be
+    },
+  },
 };
 
-export default nextConfig;
+module.exports = nextConfig;

@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-arm64-openssl-1.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// The user of the system, storing personal + company info
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique()
+  password    String
+  firstName   String
+  lastName    String?
+  image       String?
+
+  accounts    Account[]
+
+  hasPaid     Boolean   @default(false)
+  paidAt      DateTime?
+
+  stripeCustomerId String?
+
+  /// ─────────── “Personal Details” Fields ───────────
+  contactSalutation  String?
+  contactJobTitle    String?
+  contactFirstName   String?
+  contactLastName    String?
+  contactEmail       String?
+  contactMobile      String?
+
+  /// ─────────── Company Details Fields ───────────
+  companyName                            String?   
+  websiteUrl                             String?   
+  country                                String?  
+  companyBackground                      String?  
+  product                                String?   
+  competitorsUniqueValueProposition      String?   
+  currentStage                           String?   
+  mainObjective                          String?   
+  targetCustomers                        String?   
+  fundingStatus                          String?  
+  attachments                            Json?    
+
+  profileComplete  Boolean   @default(false)
+
+  grants      Grant[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model PasswordResetToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
+model Grant {
+  id       String   @id @default(cuid())
+  user     User     @relation(fields: [userId], references: [id])
+  userId   String
+
+  name     String
+  date     DateTime
+  pdfUrl   String
+
+  createdAt DateTime @default(now())
+}
