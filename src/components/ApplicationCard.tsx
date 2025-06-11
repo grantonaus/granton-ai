@@ -16,7 +16,7 @@ export default function ApplicationCard({
     return (
         <div className="bg-[#101010] border border-[#171717] p-5 rounded-md flex flex-col justify-between min-h-[110px] md:min-h-[130px]">
             <div className="flex items-start justify-between gap-2 mb-6">
-                <h3 className="font-semibold text-white/90 text-[15px] md:text-[16px] leading-normal pr-2">
+                <h3 className="font-semibold text-white/90 text-[15px] md:text-[16px] leading-normal pr-2 line-clamp-2">
                     {application.title}
                 </h3>
                 <Link href={application.fileUrl} target="_blank" download>

@@ -30,7 +30,7 @@ export function ExpandableLinkMenu({
   submenus,
   isOpen,
 }: ExpandableLinkMenuProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   return (
     <Collapsible

@@ -25,14 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  FileInput,
-  FileUploader,
-  FileUploaderContent,
-  FileUploaderItem,
-} from "@/components/ui/file-upload";
-import { Paperclip } from "lucide-react";
 import FileUpload from "./FileUpload";
+import { Loader } from "./Loader";
 
 const PdfFile = z.custom<File>(
   (f) => f instanceof File && f.type === "application/pdf",
@@ -45,10 +39,8 @@ const ExistingAttachment = z.object({
   key: z.string().min(1),
 });
 
-// 3) Now allow either a real File OR an existing‐attachment object:
 const Attachment = z.union([PdfFile, ExistingAttachment]);
 
-// ─── 1) Zod schema with PDF-only attachment validation ───────────────────────
 const companySchema = z.object({
   website_url: z.string().url("Must be a valid URL"),
   company_name: z.string().min(1, "Required"),
@@ -60,14 +52,6 @@ const companySchema = z.object({
   main_objective: z.string().min(1, "Required"),
   target_customers: z.string().min(1, "Required"),
   funding_status: z.string().min(1, "Required"),
-  // attachments: z
-  //   .array(
-  //     z.custom<File>((file) => file.type === "application/pdf", {
-  //       message: "Only PDF files are allowed",
-  //     })
-  //   )
-  //   .max(3, "You can upload up to 3 files")
-  //   .optional(),
   attachments: z
     .array(Attachment)
     .max(3, "You can have at most 3 attachments")
@@ -76,7 +60,6 @@ const companySchema = z.object({
 
 export type CompanyDetailsData = z.infer<typeof companySchema>;
 
-// blank defaults so inputs never undefined
 const blankCompany: CompanyDetailsData = {
   website_url: "",
   company_name: "",
@@ -100,7 +83,8 @@ export default function StepCompanyDetails({
   onNext,
   defaultValues,
 }: StepCompanyDetailsProps) {
-  // const [files, setFiles] = useState<File[]>(defaultValues?.attachments || []);
+
+  const [isSaving, setIsSaving] = useState<boolean>(false);
 
   const [existingFiles, setExistingFiles] = useState<
     { name: string; url: string; key: string }[]
@@ -112,7 +96,7 @@ export default function StepCompanyDetails({
     const pdfFiles = newFiles.filter((f) => f.type === "application/pdf");
     if (pdfFiles.length > 3) {
       toast.error("You can upload up to 3 PDF files only.");
-      pdfFiles.splice(3); // keep only first 3
+      pdfFiles.splice(3); 
     }
     setNewFiles(pdfFiles);
     form.setValue("attachments", pdfFiles);
@@ -126,21 +110,18 @@ export default function StepCompanyDetails({
 
   function onSubmit(values: CompanyDetailsData) {
     try {
+      setIsSaving(true)
       onNext(values);
     } catch (error) {
       console.error("Form submission error", error);
       toast.error("Failed to submit the form. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   }
 
   return (
-
-
-
     <div className="flex flex-col h-full">
-      {/* ─── Scrollable form region: fill remaining space and allow vertical scroll only when needed ─── */}
-
-
       <div className="flex-1 min-h-0 overflow-y-auto pt-2">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-w-[960px] mx-auto">
@@ -205,7 +186,6 @@ export default function StepCompanyDetails({
               </div>
             </div>
 
-            {/* 2) Company Background */}
             <FormField
               control={form.control}
               name="company_background"
@@ -225,7 +205,6 @@ export default function StepCompanyDetails({
               )}
             />
 
-            {/* 3) Product or Service */}
             <FormField
               control={form.control}
               name="product"
@@ -245,7 +224,6 @@ export default function StepCompanyDetails({
               )}
             />
 
-            {/* 4) Main Objective (Select) */}
             <FormField
               control={form.control}
               name="main_objective"
@@ -278,7 +256,6 @@ export default function StepCompanyDetails({
               )}
             />
 
-            {/* 5) Competitors / UVP */}
             <FormField
               control={form.control}
               name="competitors_unique_value_proposition"
@@ -298,7 +275,6 @@ export default function StepCompanyDetails({
               )}
             />
 
-            {/* 6) Target Customers */}
             <FormField
               control={form.control}
               name="target_customers"
@@ -318,7 +294,6 @@ export default function StepCompanyDetails({
               )}
             />
 
-            {/* 7) Current Stage (Select) */}
             <FormField
               control={form.control}
               name="current_stage"
@@ -349,7 +324,6 @@ export default function StepCompanyDetails({
               )}
             />
 
-            {/* 8) Funding Status */}
             <FormField
               control={form.control}
               name="funding_status"
@@ -369,7 +343,6 @@ export default function StepCompanyDetails({
               )}
             />
 
-            {/* 9) Attachments (up to 3 PDFs) */}
             <FormField
               control={form.control}
               name="attachments"
@@ -377,64 +350,20 @@ export default function StepCompanyDetails({
                 <FormItem>
                   <FormLabel>Attachments (Optional)</FormLabel>
                   <FormControl>
-                    {/* <FileUploader
-                      value={files}
-                      onValueChange={handleFileChange}
-                      dropzoneOptions={dropZoneConfig}
-                      className="relative bg-background rounded-md p-0.5"
-                    >
-                      <FileInput id="fileInput" className="outline-dashed outline-1 outline-border">
-                        <div className="flex items-center justify-center flex-col p-8 w-full">
-                          <div className="flex items-center justify-center rounded-md h-8 w-8 bg-[#141414] mb-2">
-                            <svg
-                              width="22"
-                              height="22"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M12.75 21C12.75 21.4142 12.4142 21.75 12 21.75C11.5858 21.75 11.25 21.4142 11.25 21V18.2119L12.75 18.21V21ZM11.4443 6C13.835 6 15.905 7.3728 16.9092 9.37305C16.9111 9.3769 16.9157 9.37952 16.9199 9.37891C19.5452 9.00301 21.9997 11.1047 22 13.7773C22 16.0819 20.2459 17.9772 18 18.2002L12.75 18.21V14.8105L13.9697 16.0303L14.0264 16.082C14.3209 16.3223 14.7557 16.3048 15.0303 16.0303C15.3049 15.7557 15.3223 15.3209 15.082 15.0264L15.0303 14.9697L12.8838 12.8232L12.7891 12.7373C12.3308 12.3635 11.6692 12.3635 11.2109 12.7373L11.1162 12.8232L8.96973 14.9697C8.67688 15.2626 8.67685 15.7374 8.96973 16.0303C9.26261 16.3231 9.73739 16.3231 10.0303 16.0303L11.25 14.8105V18.2119L6 18.2227H5.33301C3.49221 18.2225 2 16.7295 2 14.8887C2.00012 13.0606 3.52692 11.5543 5.34863 11.5557C5.3537 11.5557 5.35874 11.5519 5.35938 11.5469C5.64432 8.43653 8.25968 6.00006 11.4443 6Z"
-                                fill="#6D6D6D"
-                              />
-                            </svg>
-                          </div>
-                          <p className="mb-1 text-md font-semibold text-white">Upload file</p>
-                          <p className="text-sm text-gray-500 dark:text-[#595959]">
-                            Drag and drop your PDF here, or click to upload
-                          </p>
-                        </div>
-                      </FileInput>
-                      <FileUploaderContent>
-                        {files.map((file, i) => (
-                          <FileUploaderItem key={i} index={i}>
-                            <Paperclip className="h-4 w-4 stroke-current" />
-                            <span>{file.name}</span>
-                          </FileUploaderItem>
-                        ))}
-                      </FileUploaderContent>
-                    </FileUploader> */}
-
-                    {/* <FileUpload onFileChange={handleFileChange} /> */}
-
 
                     <FileUpload
                       existingFiles={existingFiles}
                       onRemoveExisting={(key) => {
-                        // remove from existingFiles when user clicks trash
                         setExistingFiles((prev) =>
                           prev.filter((att) => att.key !== key)
                         );
-                        // also update form state
                         const remaining = (field.value as any[] || []).filter(
                           (att: any) => att.key !== key
                         );
                         form.setValue("attachments", remaining as any);
                       }}
                       onFileChange={(incomingNew) => {
-                        // track newly selected File[] separately
                         setNewFiles(incomingNew);
-                        // merge into form’s attachments: existingFiles + new File objects
                         form.setValue(
                           "attachments",
                           // @ts-ignore
@@ -452,20 +381,16 @@ export default function StepCompanyDetails({
         </Form>
       </div>
 
-      {/* ─── Fixed footer at bottom: “Back” & “Continue” ─── */}
       <div className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8">
         <div className="max-w-[960px] mx-auto flex justify-between gap-4">
           <Button
             onClick={form.handleSubmit(onSubmit)}
-            className="flex-1 h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80"
+            className="flex-1 h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer"
           >
-            Continue
+            <Loader loading={isSaving}>Continue</Loader>
           </Button>
         </div>
       </div>
-
-
-
     </div>
   );
 }

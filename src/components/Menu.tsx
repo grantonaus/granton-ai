@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
   TooltipTrigger,
@@ -15,44 +14,24 @@ import {
 } from "@/components/ui/tooltip";
 import { useEffect, useState } from "react";
 import React from 'react';
-import { CollapseMenuButton } from "./CollapsMenuButton";
 import { getMenuList, RecentApp } from "@/constants/menuList";
 import { ExpandableLinkMenu } from "./ExpandableLinkMenu";
-import { getStripe } from "@/lib/stripeClient";
+import { loadStripe } from "@stripe/stripe-js";
 import { useCurrentUser } from "@/hooks/user";
 
 interface MenuProps {
   isOpen: boolean | undefined;
   personalIncomplete?: boolean;
+  isPremium: boolean;  
 }
 
-export function Menu({ isOpen }: MenuProps) {
+export function Menu({
+  isOpen,
+  personalIncomplete,
+  isPremium,            
+}: MenuProps) {
   const pathname = usePathname();
-  const { personalIncomplete } = (arguments[0] as MenuProps);
-  // const menuList = getMenuList(pathname);
-
-
-  const sampleApps: RecentApp[] = [
-    {
-      id: "1",
-      title: "Emerging Technologies Innovation Grant",
-      fileUrl: "/downloads/emerging-tech.pdf",
-      createdAt: "14.03.2025",
-    },
-    {
-      id: "2",
-      title: "SME Growth Accelerator Fund",
-      fileUrl: "/downloads/sme-growth.pdf",
-      createdAt: "13.03.2025",
-    },
-    {
-      id: "3",
-      title: "Global Market Expansion Grant Program",
-      fileUrl: "/downloads/global-expansion.pdf",
-      createdAt: "12.03.2025",
-    },
-  ];
-
+  const { session } = useCurrentUser();
 
 
   const [loading, setLoading] = useState(false);
@@ -60,89 +39,49 @@ export function Menu({ isOpen }: MenuProps) {
   const [recentApps, setRecentApps] = useState<RecentApp[]>([]);
   const [loadingApps, setLoadingApps] = useState(true);
 
-  // useEffect(() => {
-  //   async function loadLastThree() {
-  //     try {
-  //       const res = await fetch("/api/applications");
-  //       const json = await res.json();
-  //       if (res.ok && Array.isArray(json.applications)) {
-  //         setRecentApps(json.applications.slice(0, 3));
-  //       } else {
-  //         console.error("Failed to fetch applications:", json.error);
-  //       }
-  //     } catch (err) {
-  //       console.error("Error fetching applications:", err);
-  //     } finally {
-  //       setLoadingApps(false);
-  //     }
-  //   }
-  //   loadLastThree();
-  // }, []);
-
   useEffect(() => {
-    // Simulate a short “loading” delay, then set the sampleApps:
-    const timer = setTimeout(() => {
-      setRecentApps(sampleApps);
-      setLoadingApps(false);
-    }, 500); // 500ms delay just so you see the “Loading…” text briefly
+    async function loadRecentApps() {
+      setLoadingApps(true);
+      try {
+        const res = await fetch("/api/applications");
+        if (!res.ok) {
+          console.error("Failed to fetch applications:", res.status);
+          return;
+        }
+        const json = await res.json();
+        // API gives you { applications: [...] }
+        if (Array.isArray(json.applications)) {
+          setRecentApps(json.applications as RecentApp[]);
+        }
+      } catch (err) {
+        console.error("Error fetching applications:", err);
+      } finally {
+        setLoadingApps(false);
+      }
+    }
 
-    return () => clearTimeout(timer);
-  }, []);
+    loadRecentApps();
+  }, [session?.user?.id]);
 
   const menuList = getMenuList(pathname, recentApps);
 
 
-  const isUpgraded = false;
+  // const [isUpgraded, setIsUpgraded] = useState(false);
 
+  const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
-  const handleUpgrade = async () => {
-    setLoading(true);
+  const handleClick = async () => {
+    const res = await fetch('/api/stripe/create-session', {
+      method: 'POST',
+    });
 
-    try {
-      // 1) Call our server route to create a checkout session
-      const resp = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+    const { url } = await res.json();
+    const stripe = await stripePromise;
 
-      const data = await resp.json();
-      if (!resp.ok) {
-        console.error("Failed to create checkout session:", data);
-        alert(data.error || "Unable to start checkout.");
-        setLoading(false);
-        return;
-      }
+    if (!stripe || !url) return;
 
-      const { sessionId } = data;
-      if (!sessionId) {
-        console.error("No sessionId in response:", data);
-        alert("Something went wrong (no session ID).");
-        setLoading(false);
-        return;
-      }
-
-      // 2) Load Stripe.js and redirect to Checkout
-      const stripe = await getStripe();
-      if (!stripe) {
-        alert("Stripe.js failed to load.");
-        setLoading(false);
-        return;
-      }
-
-      const { error } = await stripe.redirectToCheckout({ sessionId });
-
-      if (error) {
-        console.error("Stripe redirect error:", error);
-        alert(error.message);
-      }
-    } catch (err) {
-      console.error("Error in handleUpgrade:", err);
-      alert("An unexpected error occurred. Try again.");
-    } finally {
-      setLoading(false);
-    }
+    // Just go to the checkout session URL
+    window.location.href = url;
   };
 
 
@@ -248,7 +187,7 @@ export function Menu({ isOpen }: MenuProps) {
           ))}
           <li className="w-full grow flex items-end overflow-visible [&>div>div]:overflow-visible">
 
-            {isUpgraded ? (
+          {isPremium ? (
               <div
                 className="
                 relative flex flex-col w-full 
@@ -287,12 +226,15 @@ export function Menu({ isOpen }: MenuProps) {
                 <p className="text-[15px] font-medium leading-snug mb-4">
                   Get real-time matches to grants and other funding opportunities based on your business & goals
                 </p>
+                {/* <a className="w-full" href="https://buy.stripe.com/test_8x200k5l99B6b8qePA0sU00"> */}
                 <Button
-                  onClick={handleUpgrade}
-                  disabled={loading}
-                  className="bg-black text-white font-bold h-11 rounded-lg">
+                  // onClick={handleUpgrade}
+                  // disabled={loading}
+                  onClick={handleClick}
+                  className="w-full bg-black text-white font-bold h-11 rounded-lg">
                   Upgrade
                 </Button>
+                {/* </a> */}
               </div>
             )}
 

@@ -1,4 +1,3 @@
-// app/reset-password/page.tsx
 "use client";
 
 import React, { useState, useTransition } from "react";
@@ -22,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/Loader";
 import { FormError } from "@/components/FormError";
 import { FormSuccess } from "@/components/FormSuccess";
-import { newPassword } from "@/app/actions/new-password"; // server action
+import { newPassword } from "@/app/actions/new-password"; 
 
 import { NewPasswordSchema } from "@/components/form/new-password";
 
@@ -31,7 +30,7 @@ type NewPasswordFormValues = z.infer<typeof NewPasswordSchema>;
 export default function ResetPasswordPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const token = searchParams.get("token") ?? ""; // extract token from URL
+  const token = searchParams.get("token") ?? ""; 
 
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
@@ -69,7 +68,6 @@ export default function ResetPasswordPage() {
         } else {
           setSuccess(result.success || "Password updated successfully!");
 
-          // Redirect to /login after a brief moment so the user can see the success message
           setTimeout(() => {
             router.push("/login");
           }, 1000);
@@ -93,7 +91,6 @@ export default function ResetPasswordPage() {
 
       <Form {...form}>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          {/* New Password */}
           <FormField
             control={control}
             name="newPassword"
@@ -113,7 +110,6 @@ export default function ResetPasswordPage() {
             )}
           />
 
-          {/* Confirm Password */}
           <FormField
             control={control}
             name="confirmNewPassword"
@@ -135,11 +131,9 @@ export default function ResetPasswordPage() {
             )}
           />
 
-          {/* Error / Success Messages */}
           {error && <FormError message={error} />}
           {success && <FormSuccess message={success} />}
 
-          {/* Submit Button with Loader */}
           <Button
             type="submit"
             className="w-full h-10 font-bold text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 mt-2 rounded-md"

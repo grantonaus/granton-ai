@@ -1,7 +1,7 @@
 import { useSession } from "next-auth/react";
-import { SheetMenu } from "./SheetMenu";
 import { UserWidget } from "./UserWidget";
 import { useCurrentUser } from "@/hooks/user";
+import SheetMenu from "./SheetMenu";
 
 
 
@@ -11,10 +11,7 @@ interface NavbarProps {
 
 export const Navbar = ({ title, }: NavbarProps) => {
 
-  // const { data: session } = useSession();
   const { session } = useCurrentUser();
-
-  console.log("session: ", session)
 
   const fullName = session?.user.firstName
     ? session.user.firstName + (session.user.lastName ? ` ${session.user.lastName}` : "")
@@ -33,7 +30,6 @@ export const Navbar = ({ title, }: NavbarProps) => {
           <UserWidget
             userid={session?.user.id}
             name={fullName}
-            // name={session?.user.firstName!}
             image={session?.user.image ?? ""}
           />
         </div>

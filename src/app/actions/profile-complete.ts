@@ -3,25 +3,25 @@
 import { client } from "@/lib/prisma";
 import { auth } from "../../../auth";
 
-export async function isUserPremium() {
+export async function isProfileComplete() {
   const session = await auth();
   const user = session?.user;
 
   if (!user) {
-    return { success: false, subscribed: false };
+    return { success: false, isProfileComplete: false };
   }
 
   const existingUser = await client.user.findUnique({
     where: { id: user.id },
-    select: { hasPaid: true },
+    select: { profileComplete: true }, // ✅ include this field
   });
 
   if (!existingUser) {
-    return { success: false, subscribed: false };
+    return { success: false, isProfileComplete: false };
   }
 
   return {
     success: true,
-    subscribed: existingUser.hasPaid === true,
+    isProfileComplete: existingUser.profileComplete === true,
   };
 }

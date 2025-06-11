@@ -6,21 +6,24 @@ import { Button } from "@/components/ui/button";
 import { GrantDetailsData } from "./StepGrantDetails";
 import { BudgetDetailsData } from "./StepBudget";
 import { CompanyDetailsData } from "./StepCompanyDetails";
+import Spinner from "./Spinner";
+import { Loader } from "./Loader";
 
 const generateUUID = () => crypto.randomUUID();
 
 interface AdditionalQuestionsProps {
-  onNext: () => void;
+  onNext: (messages: Message[]) => void;
   onBack: () => void;
   applicationFormFile: File | null;
   applicationFormLink: string;
   companyDetails: CompanyDetailsData; // <- this cannot be undefined
   grantDetails: GrantDetailsData;
   budgetDetails: BudgetDetailsData;
+  setCombinedFormText: (text: string) => void;
 
 }
 
-interface Message {
+export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
@@ -34,427 +37,339 @@ export default function AdditionalQuestions({
   budgetDetails,
   applicationFormFile,
   applicationFormLink,
+  setCombinedFormText,
 }: AdditionalQuestionsProps) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [questions, setQuestions] = useState<string[]>([]);
+  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+  const [input, setInput] = useState("");
   const [canType, setCanType] = useState(false);
   const [canFinalize, setCanFinalize] = useState(false);
-  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [systemPrompt, setSystemPrompt] = useState<string>("");
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
+  const [chatHeight, setChatHeight] = useState(0);
+
+  const [availableHeight, setAvailableHeight] = useState(0);
+
+  const [isGenerating, setIsGenerating] = useState(false);
 
 
-  const streamMsgIdRef = useRef<string | null>(null);
-
+  // Fetch questions once
   useEffect(() => {
-    let isCancelled = false;
+    let cancelled = false;
 
-    // If neither a file nor link was provided, show an error bubble and never enable typing
-    if (!applicationFormFile && !applicationFormLink.trim()) {
-      const id = generateUUID();
-      setMessages([{ id, role: "assistant", content: "No application form provided." }]);
-      setCanType(false);
-      return;
+    async function fetchQuestions() {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+
+        const form = new FormData();
+
+        form.append("company_name", companyDetails.company_name);
+        form.append("website_url", companyDetails.website_url);
+        form.append("country", companyDetails.country);
+        form.append("company_background", companyDetails.company_background);
+        form.append("product", companyDetails.product);
+        form.append(
+          "competitors_unique_value_proposition",
+          companyDetails.competitors_unique_value_proposition
+        );
+        form.append("current_stage", companyDetails.current_stage);
+        form.append("main_objective", companyDetails.main_objective);
+        form.append("target_customers", companyDetails.target_customers);
+        form.append("funding_status", companyDetails.funding_status);
+
+        if (Array.isArray(companyDetails.attachments)) {
+          companyDetails.attachments.forEach((att, idx) => {
+            if (att instanceof File) {
+              return;
+            }
+            form.append(`companyAttachmentUrl_${idx}`, att.url);
+          });
+        }
+
+        if (applicationFormFile) {
+          form.append("applicationFormFile", applicationFormFile);
+        } else {
+          form.append("applicationFormLink", applicationFormLink.trim());
+        }
+
+        form.append("grant_link", grantDetails.grantLink);
+        form.append("amount_applying_for", grantDetails.amountApplyingFor);
+
+        form.append("allocation_details", budgetDetails.allocationDetails);
+
+        form.append("messages", JSON.stringify([]));
+
+
+        const res = await fetch("/api/extract_questions", { method: "POST", body: form });
+        if (!res.ok) throw new Error(await res.text());
+
+        const json = await res.json();
+        if (!Array.isArray(json.questions) || typeof json.combinedFormText !== "string") {
+          throw new Error("Unexpected API response format");
+        }
+
+        if (!cancelled) {
+          // setQuestions(json.questions);
+          // setCombinedFormText(json.combinedFormText);
+          // typeOut(questions[0], 1);
+
+          // 1) stash it locally
+          const fetchedQs = json.questions;
+
+          // 2) update state
+          setQuestions(fetchedQs);
+          setCombinedFormText(json.combinedFormText);
+          setCurrentQuestionIdx(0);
+
+          // 3) type out the very first one
+          streamQuestion(0, fetchedQs[0]);
+        }
+      } catch (err: any) {
+        setLoadError(err.message || "Failed to load questions");
+      } finally {
+        setIsLoading(false);
+      }
     }
 
-    async function fetchInitialQuestion() {
-      // 1) Create a brand‐new assistant message in state with empty content
-      const assistantId = generateUUID();
-      streamMsgIdRef.current = assistantId;
-      setMessages([{ id: assistantId, role: "assistant", content: "" }]);
+    fetchQuestions();
 
-      // 2) Build FormData exactly as our backend expects (file or link + empty messages array)
-      const form = new FormData();
+    return () => {
+      cancelled = true;
+    };
+  }, [companyDetails, grantDetails, budgetDetails, applicationFormFile, applicationFormLink, setCombinedFormText]);
 
-      form.append("company_name", companyDetails.company_name);
-      form.append("website_url", companyDetails.website_url);
-      form.append("country", companyDetails.country);
-      form.append("company_background", companyDetails.company_background);
-      form.append("product", companyDetails.product);
-      form.append(
-        "competitors_unique_value_proposition",
-        companyDetails.competitors_unique_value_proposition
-      );
-      form.append("current_stage", companyDetails.current_stage);
-      form.append("main_objective", companyDetails.main_objective);
-      form.append("target_customers", companyDetails.target_customers);
-      form.append("funding_status", companyDetails.funding_status);
 
-      if (Array.isArray(companyDetails.attachments)) {
-        companyDetails.attachments.forEach((att, idx) => {
-          if (att instanceof File) {
-            // By this point, there shouldn’t be any raw File objects.
-            // If you do have a File, you can either skip or handle it here.
-            return;
-          }
-          // att is now { name: string; url: string; key: string }
-          form.append(`companyAttachmentUrl_${idx}`, att.url);
-        });
-      }
+  // useEffect(() => {
+  //   const sampleQs = [
+  //     "What is your project’s timeline?",
+  //     "What are your expected start and end dates?",
+  //     "How will you measure success or track outcomes?",
+  //   ];
 
-      if (applicationFormFile) {
-        form.append("applicationFormFile", applicationFormFile);
-      } else {
-        form.append("applicationFormLink", applicationFormLink.trim());
-      }
+  //   // give the UI a moment before starting
+  //   setTimeout(() => {
+  //     setQuestions(sampleQs);
+  //     streamQuestion(0, sampleQs[0]);
+  //     setIsLoading(false);
+  //   }, 200);
+  // }, []);
 
-      form.append("grant_link", grantDetails.grantLink);
-      form.append("amount_applying_for", grantDetails.amountApplyingFor);
 
-      form.append("allocation_details", budgetDetails.allocationDetails);
+  const streamQuestion = (idx: number, text: string) => {
+    setCanType(false);
+    setCanFinalize(false);
 
-      form.append("messages", JSON.stringify([]));
+    // 1-based numbering + prefix
+    const numbered = `${idx + 1}. ${text}`;
 
-      // 3) Kick off the fetch to our streaming endpoint
-      const res = await fetch("/api/extract_questions", {
-        method: "POST",
-        body: form,
-      });
+    const id = generateUUID();
+    // Insert a blank assistant bubble
+    setMessages((m) => [...m, { id, role: "assistant", content: "" }]);
 
-      if (!res.ok || !res.body) {
-        // If streaming fails, replace the assistant message with an error
-        const errorText = await res.text();
-        if (!isCancelled) {
-          setMessages([
-            {
-              id: assistantId,
-              role: "assistant",
-              content: `❌ Failed to load first question (${res.status}): ${errorText}`,
-            },
-          ]);
-          setCanType(false);
+    let i = 0;
+    // small delay for realism
+    setTimeout(() => {
+      const iv = setInterval(() => {
+        // stop once we've typed everything
+        if (i >= numbered.length) {
+          clearInterval(iv);
+          setCanType(true);
+          return;
         }
+        // append next character safely
+        const char = numbered.charAt(i);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === id ? { ...msg, content: msg.content + char } : msg
+          )
+        );
+        i++;
+      }, 30);
+    }, 300);
+  };
+
+
+
+  const typeOut = (text: string, number: number) => {
+    setCanType(false);
+    setCanFinalize(false);
+
+    const full = `${number}. ${text}`;
+    const id = generateUUID();
+    setMessages(m => [...m, { id, role: "assistant", content: "" }]);
+
+    let i = 0;
+    const iv = setInterval(() => {
+      if (i >= full.length) {
+        clearInterval(iv);
+        setCanType(true);
         return;
       }
+      const char = full.charAt(i);
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === id ? { ...msg, content: msg.content + char } : msg
+        )
+      );
+      i++;
+    }, 30);
+  };
 
-      // 4) Obtain a reader from the response body, and decode chunk by chunk
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let done = false;
 
-      while (!done && !isCancelled) {
-        const { value, done: readerDone } = await reader.read();
-        done = readerDone;
-        if (value && !isCancelled) {
-          const chunkText = decoder.decode(value);
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId
-                ? { ...m, content: m.content + chunkText }
-                : m
-            )
-          );
-        }
-      }
 
-      // 5) Once streaming has finished, enable the user input
-      if (!isCancelled) {
-        setCanType(true);
-      }
+  // auto-scroll on new message
+  useEffect(() => {
+    const el = chatContainerRef.current;
+    if (!el) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+    // only auto-scroll if within 100px of the bottom already
+    if (distanceFromBottom < 100) {
+      el.scrollTop = scrollHeight;
+    }
+  }, [messages]);
+
+
+
+  // calculate chat height
+  useEffect(() => {
+    function calculateHeight() {
+
+      const navbarElem = document.getElementById("navbar");
+      const footerElem = document.getElementById("footer");
+
+      const navbarHeight = navbarElem
+        ? navbarElem.getBoundingClientRect().height
+        : 0;
+      const footerHeight = footerElem
+        ? footerElem.getBoundingClientRect().height
+        : 0;
+
+      const extraPaddingTop = 16;
+      const extraPaddingBottom = 16;
+
+      const newAvailableHeight =
+        window.innerHeight -
+        navbarHeight -
+        footerHeight -
+        extraPaddingTop -
+        extraPaddingBottom;
+
+      setAvailableHeight(newAvailableHeight);
     }
 
-    fetchInitialQuestion();
-    return () => {
-      isCancelled = true;
-    };
-  }, [companyDetails, grantDetails, budgetDetails, applicationFormFile, applicationFormLink]);
+    calculateHeight();
 
-  const handleSend = async () => {
-    if (!canType || !input.trim()) return;
+    window.addEventListener("resize", calculateHeight);
+    return () => window.removeEventListener("resize", calculateHeight);
+  }, []);
 
-    // Append the user's new message
-    const newUserMsg: Message = {
+
+
+
+  // 4) Helper to “type” each question
+  const simulateAssistantTyping = (text: string, number: number) => {
+    // const raw = questions[idx] || "";
+    // const text = `${idx + 1}. ${raw}`; // prefix with number
+
+    // setCanType(false);
+    // setCanFinalize(false);
+
+    // const id = generateUUID();
+    // setMessages(m => [...m, { id, role: "assistant", content: "" }]);
+
+    // let i = 0;
+    // const iv = setInterval(() => {
+    //   // 1) If we've printed *all* characters, stop:
+    //   if (i >= text.length) {
+    //     clearInterval(iv);
+    //     setCanType(true);
+    //     return;
+    //   }
+    //   // 2) Otherwise append the *current* character:
+    //   const char = text.charAt(i);
+    //   setMessages(prev =>
+    //     prev.map(msg =>
+    //       msg.id === id
+    //         ? { ...msg, content: msg.content + char }
+    //         : msg
+    //     )
+    //   );
+    //   i++;
+    // }, 30);
+
+
+
+    setCanType(false);
+    setCanFinalize(false);
+
+    const id = generateUUID();
+    setMessages((m) => [...m, { id, role: "assistant", content: "" }]);
+
+    let i = 0;
+    const iv = setInterval(() => {
+      if (i === text.length) {
+        clearInterval(iv);
+        setCanType(true);
+        return;
+      }
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === id
+            ? { ...msg, content: msg.content + text[i] }
+            : msg
+        )
+      );
+      i++;
+    }, 20);
+  };
+
+
+  const handleNext = () => {
+    if (!input.trim()) return;
+
+    // record user
+    const userMsg: Message = {
       id: generateUUID(),
       role: "user",
       content: input.trim(),
     };
-    setMessages((prev) => [...prev, newUserMsg]);
+    setMessages((m) => [...m, userMsg]);
     setInput("");
-    setCanType(false); // disable input until next question finishes streaming
+    setCanType(false);
 
-    const form = new FormData();
-
-    form.append("company_name", companyDetails.company_name);
-    form.append("website_url", companyDetails.website_url);
-    form.append("country", companyDetails.country);
-    form.append("company_background", companyDetails.company_background);
-    form.append("product", companyDetails.product);
-    form.append(
-      "competitors_unique_value_proposition",
-      companyDetails.competitors_unique_value_proposition
-    );
-    form.append("current_stage", companyDetails.current_stage);
-    form.append("main_objective", companyDetails.main_objective);
-    form.append("target_customers", companyDetails.target_customers);
-    form.append("funding_status", companyDetails.funding_status);
-
-    if (Array.isArray(companyDetails.attachments)) {
-      companyDetails.attachments.forEach((att, idx) => {
-        if (att instanceof File) {
-          // By this point, there shouldn’t be any raw File objects.
-          // If you do have a File, you can either skip or handle it here.
-          return;
-        }
-        // att is now { name: string; url: string; key: string }
-        form.append(`companyAttachmentUrl_${idx}`, att.url);
-      });
-    }
-
-    if (applicationFormFile) {
-      form.append("applicationFormFile", applicationFormFile);
+    // next question?
+    const next = currentQuestionIdx + 1;
+    setCurrentQuestionIdx(next);
+    if (next < questions.length) {
+      streamQuestion(next, questions[next]);
     } else {
-      form.append("applicationFormLink", applicationFormLink.trim());
-    }
-
-    form.append("grant_link", grantDetails.grantLink);
-    form.append("amount_applying_for", grantDetails.amountApplyingFor);
-
-    form.append("allocation_details", budgetDetails.allocationDetails);
-
-    const fullMessages = [
-      { role: "system", content: systemPrompt },
-      ...messages,
-      newUserMsg,
-    ];
-    form.append("messages", JSON.stringify(fullMessages));
-
-    // // Build a JSON payload with ALL messages so far (assistant + user)
-    // const payload = {
-    //   messages: messages
-    //     .concat(newUserMsg) // include this new answer
-    //     .map((m) => ({
-    //       role: m.role,
-    //       content: m.content,
-    //     })),
-    //   // No need to re‐send file or link after the first request
-    //   applicationFormLink: "",
-    // };
-
-    // const res = await fetch("/api/extract_questions", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify(payload),
-    // });
-
-    const res = await fetch("/api/extract_questions", {
-      method: "POST",
-      body: form,
-    });
-
-    if (!res.ok || !res.body) {
-      const errorText = await res.text();
-      const assistantError: Message = {
-        id: generateUUID(),
-        role: "assistant",
-        content: `❌ Failed to load next question (${res.status}): ${errorText}`,
-      };
-      setMessages((prev) => [...prev, assistantError]);
-      return;
-    }
-
-    const assistantId = generateUUID();
-    streamMsgIdRef.current = assistantId;
-    setMessages((prev) => [
-      ...prev,
-      { id: assistantId, role: "assistant", content: "" },
-    ]);
-
-    // Stream the assistant’s reply (either one question or NO_MORE_QUESTIONS)
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let done = false;
-    let fullAssistantText = "";
-
-    while (!done) {
-      const { value, done: readerDone } = await reader.read();
-      done = readerDone;
-      if (value) {
-        const chunk = decoder.decode(value);
-        fullAssistantText += chunk;
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId
-              ? { ...m, content: m.content + chunk }
-              : m
-          )
-        );
-      }
-    }
-
-    // Once streaming finishes, check for the “no more questions” token
-    if (fullAssistantText.trim().startsWith("### NO_MORE_QUESTIONS")) {
-      // Replace that token with a friendly “we're done” message
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantId
-            ? {
-              ...m,
-              content:
-                "🎉 All questions answered! You can now click “Finalise.”",
-            }
-            : m
-        )
-      );
       setCanFinalize(true);
-      setCanType(false);
-    } else {
-      // We got a real next question—re-enable input
-      setCanType(true);
     }
   };
 
+  if (isLoading) return <div className="w-full h-full flex items-center justify-center"><Spinner /></div>;
+  // if (loadError) return <div className="flex-1 flex flex-col items-center justify-center p-4"><p className="text-red-500">Error: {loadError}</p><Button onClick={onBack}>Back</Button></div>;
 
 
 
 
-  const handleGenerateApplication = async () => {
-    // if (!session || !session.user) {
-    //   setError("You must be logged in to generate an application.");
-    //   return;
-    // }
-
-    // setError(null);
-    // setIsGenerating(true);
-    // setDownloadUrl(null);
-
-    // try {
-    //   // A) Build a simple PDF “in memory”
-    //   const doc = new jsPDF("p", "pt", "a4");
-    //   const pageWidth = doc.internal.pageSize.getWidth();
-    //   const pageHeight = doc.internal.pageSize.getHeight();
-
-    //   // 1) Fill background dark (#0F0F0F) and white text (11pt, line‐height 1.3)
-    //   doc.setFillColor(15, 15, 15);
-    //   doc.rect(0, 0, pageWidth, pageHeight, "F");
-
-    //   const marginLeft = 40;
-    //   const marginTop = 40;
-    //   const usableWidth = pageWidth - marginLeft * 2;
-
-    //   doc.setFontSize(11);
-    //   doc.setLineHeightFactor(1.3);
-    //   doc.setTextColor(255, 255, 255);
-
-    //   // 2) Insert whatever “sample” content you like. Here, we’ll stitch together
-    //   //    company + grant + budget info into a simple blob of text. You can replace
-    //   //    this with the real output from your AI chat once you finalize that flow.
-    //   const sampleText = `
-    //   Grant Application
-    //   -----------------
-    //   Company Name: ${companyDetails.company_name}
-    //   Website: ${companyDetails.website_url}
-    //   Country: ${companyDetails.country}
-
-    //   Grant Link: ${grantDetails.grantLink}
-    //   Amount Requested: ${grantDetails.amountApplyingFor}
-
-    //   Budget Allocation:
-    //   ${budgetDetails.allocationDetails}
-
-    //   “This is your sample application. Replace this text with the real generated content.”
-    //   `;
-
-    //   doc.text(sampleText.trim(), marginLeft, marginTop, {
-    //     maxWidth: usableWidth,
-    //     align: "left",
-    //   });
-
-    //   // 3) Export the PDF as a data URI (Base64)
-    //   const dataUriString = doc.output("datauristring") as string;
-    //   //    It will look like: "data:application/pdf;base64,JVBERi0xLj…"
-
-    //   // 4) Fire off a fetch to our new API route
-    //   //    We send the full dataUriString + a “name” for the grant.
-    //   const resp = await fetch("/api/generate-application", {
-    //     method: "POST",
-    //     headers: {
-    //       "Content-Type": "application/json",
-    //     },
-    //     body: JSON.stringify({
-    //       file: dataUriString,
-    //       // Use a human‐readable name (for example, the grant link or some label).
-    //       // Your Prisma model requires a “name” and a “date.” We’ll set date = now()
-    //       // on the server side, so here we only send “name.”
-    //       name: `Grant for ${companyDetails.company_name}`,
-    //     }),
-    //   });
-
-    //   const json = await resp.json();
-    //   if (!resp.ok || !json.success) {
-    //     throw new Error(json.error || "Failed to save application.");
-    //   }
-
-    //   // 5) We now have json.grant.pdfUrl (the public S3 URL). Save it in state.
-    //   setDownloadUrl(json.grant.pdfUrl);
-
-    //   // 6) Optionally navigate forward or show a success message
-    //   //    Here, we’ll immediately call onNext() so the parent can move to step 4.
-    //   onNext();
-    // } catch (e: any) {
-    //   console.error("Error generating or uploading PDF:", e);
-    //   setError(e.message || "Unknown error");
-    // } finally {
-    //   setIsGenerating(false);
-    // }
-  };
-
-
-
-
-  //
-  // ─── DYNAMIC HEIGHT CALCULATION FOR CHAT CONTAINER ─────────────────────────────────
-  //
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-  const footerRef = useRef<HTMLDivElement>(null);
-  const [chatHeight, setChatHeight] = useState<number>(0);
-
-  useEffect(() => {
-    function calculateChatHeight() {
-      if (!chatContainerRef.current || !footerRef.current) {
-        return;
-      }
-
-      // 1) How far down the page does the chat container start?
-      const topOffset =
-        chatContainerRef.current.getBoundingClientRect().top;
-
-      // 2) How tall is the footer (Back + Finalise row)?
-      const footerHeight =
-        footerRef.current.getBoundingClientRect().height;
-
-      // 3) Subtract from the viewport height:
-      //    available = window.innerHeight − topOffset − footerHeight − anyExtraMargin
-      const extraBottomMargin = 0; // e.g. if you want extra padding below
-      const available = window.innerHeight - topOffset - footerHeight - extraBottomMargin;
-
-      setChatHeight(available);
-    }
-
-    // Calculate immediately on mount
-    calculateChatHeight();
-
-    // Recalculate on resize
-    window.addEventListener("resize", calculateChatHeight);
-    return () => {
-      window.removeEventListener("resize", calculateChatHeight);
-    };
-  }, []);
 
   return (
-    // 1) Top-level flex-col that fills its parent, hiding overflow
     <div className="flex flex-col h-full overflow-hidden">
-      {/* 
-        2) Chat container (fixed to fill space between header & footer):
-           - flex-1 so it takes all available space above the footer
-           - flex flex-col to stack header, messages, input
-           - overflow-hidden prevents expansion beyond its box
-      */}
+
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* 
-        {/* <div className="flex-1 flex flex-col mx-auto w-full max-w-[960px] rounded-md border border-border bg-[#0E0E0E]"> */}
         <div
           ref={chatContainerRef}
           className="flex flex-col mx-auto w-full max-w-[960px] rounded-md border border-border bg-[#0E0E0E] overflow-hidden"
-          style={{ height: chatHeight }}
+          style={{ height: availableHeight }}
         >
           {/* Header (fixed height) */}
           <div className="flex items-center border-b border-[#1C1C1C]">
@@ -462,13 +377,6 @@ export default function AdditionalQuestions({
               Chat with AI Grant Writer
             </p>
           </div>
-
-          {/*
-            4) Messages pane:
-               - flex-1: fills space between header & input
-               - overflow-y-auto: scrolls when messages overflow
-               - spacing/padding around messages
-          */}
           <div className="flex-1 overflow-y-auto py-5 px-4 space-y-4 text-[15px]">
             {messages.map((msg) => (
               <div
@@ -478,8 +386,8 @@ export default function AdditionalQuestions({
               >
                 <div
                   className={`p-4 rounded-lg max-w-[80%] ${msg.role === "assistant"
-                    ? "bg-[#0E0E0E] border border-[#1C1C1C] text-gray-200 font-medium"
-                    : "bg-[#121212] border border-[#1d1d1d] text-white font-medium"
+                    ? "bg-[#0E0E0E] border border-[#1C1C1C] text-gray-200"
+                    : "bg-[#121212] border border-[#1d1d1d] text-white"
                     }`}
                 >
                   {msg.content}
@@ -488,14 +396,18 @@ export default function AdditionalQuestions({
             ))}
           </div>
 
-          {/* Input bar (fixed height) */}
           <div className="flex items-center p-4 border-t border-[#191919]">
             <input
               type="text"
               placeholder="Start typing there..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              // onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleNext();
+                }
+              }}
               disabled={!canType}
               className={`
                 flex-1 h-10 
@@ -505,7 +417,8 @@ export default function AdditionalQuestions({
               `}
             />
             <button
-              onClick={handleSend}
+              // onClick={handleSend}
+              onClick={handleNext}
               disabled={!canType}
               className={`
                 ml-3 size-10 flex items-center justify-center rounded-md 
@@ -529,12 +442,7 @@ export default function AdditionalQuestions({
           </div>
         </div>
       </div>
-
-      {/* 
-        5) Footer: “Back” + “Finalise” buttons
-           Because parent is flex-col h-full, this sticks to bottom.
-      */}
-      <div className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8">
+      <div ref={footerRef} className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8">
         <div className="max-w-[960px] mx-auto flex justify-between gap-4">
           <Button
             variant="outline"
@@ -546,7 +454,11 @@ export default function AdditionalQuestions({
           </Button>
           <Button
             type="button"
-            onClick={onNext}
+            onClick={async () => {
+              setIsGenerating(true);
+              await onNext(messages);
+              setIsGenerating(false);
+            }}
             disabled={!canFinalize}
             className={`
               flex-1 h-10 font-black text-black 
@@ -555,10 +467,11 @@ export default function AdditionalQuestions({
                 : "bg-[#3a3a3a] cursor-not-allowed opacity-60"}
             `}
           >
-            Finalise
+            <Loader loading={isGenerating}>Finalise</Loader>
           </Button>
         </div>
       </div>
     </div>
   );
+
 }

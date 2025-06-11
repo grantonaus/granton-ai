@@ -1,9 +1,6 @@
 "use client";
 
 import { FC } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
 const defaultSteps = [
   "Company Details",
@@ -43,9 +40,7 @@ export const StepTracker: FC<StepTrackerProps> = ({
                 ${active ? "bg-[#191C1C]/60" : ""} 
                 ${reached ? "hover:bg-[#68FCF2]/5" : ""}
               `}
-              // ${active ? "bg-[#191C1C]" : ""} 
               >
-                {/* number bubble */}
                 <div
                   className={
                     `flex items-center justify-center
@@ -60,7 +55,6 @@ export const StepTracker: FC<StepTrackerProps> = ({
                   {step}
                 </div>
 
-                {/* title */}
                 <span
                   className={`
                   ml-2 text-sm font-semibold
@@ -72,18 +66,7 @@ export const StepTracker: FC<StepTrackerProps> = ({
                 </span>
               </button>
 
-              {/* arrow between steps */}
               {idx < steps.length - 1 && (
-                // <ChevronRight
-                //   className={
-                //     mx-2 transition-all duration-500 ease-in-out
-                //     ${reached ? "text-[#202020]" : "text-[#202020]"}
-                //   }
-                //   size={16}
-                //   strokeWidth={3}
-                // />
-
-                // <div className="w-4 lg:w-7  h-[2px] rounded bg-[#202020] mx-4" />
                 <div
                   className={`
       h-[2px] rounded 
@@ -97,8 +80,6 @@ export const StepTracker: FC<StepTrackerProps> = ({
         })}
       </div>
 
-      {/* MOBILE: 5 boxes */}
-      {/* MOBILE: equal-width bars */}
       <div className="flex xl:hidden w-full h-1 space-x-2">
         {steps.map((_, idx) => {
           const step = idx + 1;

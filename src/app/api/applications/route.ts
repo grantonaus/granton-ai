@@ -1,6 +1,6 @@
 // File: /app/api/applications/route.ts
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { client } from "@/lib/prisma";      // Adjust the import path if your prisma client lives elsewhere           // Same auth helper you used in decks example
 import { auth } from "../../../../auth";
 
@@ -40,6 +40,40 @@ export async function GET() {
     return NextResponse.json({ applications }, { status: 200 });
   } catch (err: unknown) {
     console.error("Error fetching applications:", err);
+    if (err instanceof Error) {
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+    return NextResponse.json({ error: "An unknown error occurred" }, { status: 500 });
+  }
+}
+
+
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session || !session.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = session.user.id;
+
+    const { name, date, pdfUrl } = await request.json();
+    if (!name || !date || !pdfUrl) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    const grant = await client.grant.create({
+      data: {
+        userId,
+        name,
+        date: new Date(date),
+        pdfUrl,
+      },
+    });
+
+    return NextResponse.json({ grant }, { status: 201 });
+  } catch (err: unknown) {
+    console.error("Error creating grant:", err);
     if (err instanceof Error) {
       return NextResponse.json({ error: err.message }, { status: 500 });
     }

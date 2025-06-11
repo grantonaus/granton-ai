@@ -1,19 +1,38 @@
+// app/(main)/Sidebar.tsx
+import React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
 import { Menu } from "./Menu";
-import { usePersonal } from "@/contexts/PersonalContext";
+import { client } from "@/lib/prisma";
+import { auth } from "../../auth";
 
-export function Sidebar() {
+export async function Sidebar() {
+  const session = await auth();
+  const userId = session?.user?.id ?? null;
 
-  const { hasPersonalDetails } = usePersonal();
+  let isPremium = session?.user?.hasPaid === true;
 
+  // let profileComplete = false;
+  // if (userId) {
+  //   try {
+  //     const existingUser = await client.user.findUnique({
+  //       where: { id: userId },
+  //       select: { profileComplete: true },
+  //     });
+  //     profileComplete = existingUser?.profileComplete === true;
+  //   } catch (e) {
+  //     console.error("Could not query Prisma for profileComplete:", e);
+  //     profileComplete = false;
+  //   }
+  // }
+
+  let profileComplete = session?.user.profileComplete === true;
 
   return (
     <aside
       className={cn(
-        // "fixed top-0 left-0 z-40 h-screen -translate-x-full lg:translate-x-0 transition-[width] ease-in-out duration-300 bg-[#fafafa] dark:bg-[#090909]",
         "fixed top-0 left-0 z-40 h-screen bg-[#121212] -translate-x-full lg:translate-x-0 transition-[width] ease-in-out duration-300 w-80"
       )}
     >
@@ -25,20 +44,16 @@ export function Sidebar() {
           variant="link"
           asChild
         >
-          <Link href="/home" className="flex items-center gap-2">
-            {/* <div className="rounded-sm bg-gray-white border dark:bg-black w-6 h-6 mr-1" /> */}
-            {/* <div className="rounded-sm bg-[#6127FF] flex items-center justify-center size-7 mr-1">
-              <div className="size-4 rounded-full bg-white dark:bg-black"/>
-            </div> */}
-            <Image
-              src="/logo.png"
-              alt='logo'
-              width={114}
-              height={53}
-            />
+          <Link href="/new-application" className="flex items-center gap-2">
+            <Image src="/logo.png" alt="logo" width={114} height={53} />
           </Link>
         </Button>
-        <Menu isOpen={true} personalIncomplete={!hasPersonalDetails} />
+
+        <Menu
+          isOpen={true}
+          personalIncomplete={!profileComplete}
+          isPremium={isPremium}
+        />
       </div>
     </aside>
   );

@@ -1,8 +1,6 @@
-// components/UserAvatar.tsx
 "use client";
 
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { LogOut, Settings } from "lucide-react";
 import {
   AlertDialog,
@@ -31,7 +29,6 @@ export const UserAvatar = ({ image, name }: UserWidgetProps) => {
   const initials = useInitials(name);
   const router = useRouter();
 
-  console.log("initials: ", initials)
 
   const onLogout = async () => {
     try {

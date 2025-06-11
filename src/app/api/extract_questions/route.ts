@@ -7,14 +7,27 @@ import fetch from "node-fetch";
 import * as cheerio from "cheerio";
 import pdfParse from "pdf-parse";
 import { openai } from "@ai-sdk/openai";
-import { streamText } from "ai";
+import { generateObject, streamText } from "ai";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-/**
- * ─── Helper: Scrape plain text from a URL ───────────────────────────────
- */
+const questionsSchema = z.object({
+  questions: z.array(z.string().min(1)),
+});
+
+const chatContinuationSchema = z.object({
+  messages: z.array(
+    z.object({
+      role: z.enum(["system", "user", "assistant"]),
+      content: z.string().min(1),
+    })
+  ),
+});
+
+
+
+
 async function extractTextFromWeb(url: string): Promise<string> {
   console.log(`[extractTextFromWeb] Fetching URL: ${url}`);
   const res = await fetch(url);
@@ -28,15 +41,13 @@ async function extractTextFromWeb(url: string): Promise<string> {
   const text = $("article").text() || $("body").text();
   console.log(`[extractTextFromWeb] Extracted ${text.length} chars from web.`);
   return text
-    .replace(/(\w+)-\s+(\w+)/g, "$1$2") // glue broken hyphens
-    .replace(/\s{2,}/g, " ")           // collapse multiple spaces
-    .replace(/[^a-zA-Z0-9.,!?\s]/g, "") // strip non‐printables
+    .replace(/(\w+)-\s+(\w+)/g, "$1$2")
+    .replace(/\s{2,}/g, " ")
+    .replace(/[^a-zA-Z0-9.,!?\s]/g, "")
     .trim();
 }
 
-/**
- * ─── Helper: Extract plain text from a PDF File ──────────────────────────
- */
+
 async function extractTextFromPDF(file: File): Promise<string> {
   console.log(`[extractTextFromPDF] Parsing PDF: ${file.name} (${file.size} bytes)`);
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -46,23 +57,28 @@ async function extractTextFromPDF(file: File): Promise<string> {
   return text.trim();
 }
 
-/**
- * ─── Zod schema for JSON‐only “chat continuation” ───────────────────────
- * This is used on subsequent calls once “form text” is already in the system prompt.
- */
-const chatContinuationSchema = z.object({
-  messages: z.array(
-    z.object({
-      role: z.enum(["system", "user", "assistant"]),
-      content: z.string().min(1),
-    })
-  ),
-});
+async function extractTextFromPdfUrl(url: string): Promise<string> {
+  console.log(`[extractTextFromPdfUrl] Fetching PDF URL: ${url}`);
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch PDF at ${url} (status ${res.status})`);
+  }
+  const arrayBuffer = await res.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const { text = "" } = await pdfParse(buffer);
+  console.log(`[extractTextFromPdfUrl] Extracted ${text.length} chars`);
+  return text.trim();
+}
 
-export const NextQuestionSchema = z.object({
-  fieldKey: z.string().nonempty().describe("internal field identifier"),
-  text: z.string().nonempty().describe("the text of the question to ask"),
-});
+
+function cleanExtractedText(raw: string): string {
+  return raw
+    .replace(/-\r?\n\s*/g, "")
+    .replace(/([^\r\n])[\r\n]+(?=[^\r\n])/g, "$1 ")
+    .replace(/ {2,}/g, " ")
+    .replace(/(\r?\n){2,}/g, "\n\n")
+    .trim();
+}
 
 
 export async function POST(request: Request) {
@@ -95,44 +111,24 @@ export async function POST(request: Request) {
       const targetCustomers = (formData.get("target_customers") as string) || "";
       const fundingStatus = (formData.get("funding_status") as string) || "";
 
-      // ── Step 1: COMPANY ATTACHMENTS ───────────────────────────────────────
-      const companyAttachmentTexts: string[] = [];
-      let idx = 0;
-      while (true) {
-        const fileKey = `companyAttachmentFile_${idx}`;
-        const urlKey = `companyAttachmentUrl_${idx}`;
-        if (formData.has(fileKey)) {
-          const file = formData.get(fileKey) as File;
-          try {
-            const pdfText = await extractTextFromPDF(file);
-            companyAttachmentTexts.push(
-              `COMPANY ATTACHMENT (PDF: ${file.name}):\n${pdfText}`
-            );
-          } catch (e: any) {
-            console.error(`[extract_questions_chat] Error parsing ${fileKey}:`, e);
-            companyAttachmentTexts.push(
-              `COMPANY ATTACHMENT (PDF: ${file.name}) parse error: ${e.message}`
-            );
-          }
-          idx++;
-          continue;
-        } else if (formData.has(urlKey)) {
-          const s3url = formData.get(urlKey) as string;
-          try {
-            const webText = await extractTextFromWeb(s3url);
-            companyAttachmentTexts.push(
-              `COMPANY ATTACHMENT (URL: ${s3url}):\n${webText}`
-            );
-          } catch (e: any) {
-            console.error(`[extract_questions_chat] Error fetching ${urlKey}:`, e);
-            companyAttachmentTexts.push(
-              `COMPANY ATTACHMENT (URL: ${s3url}) fetch error: ${e.message}`
-            );
-          }
-          idx++;
-          continue;
+      const companyAttachmentTexts: string[] = []
+      for (let idx = 0; /* stop when no more keys */; idx++) {
+        const urlKey = `companyAttachmentUrl_${idx}`
+        if (!formData.has(urlKey)) break
+
+        const s3url = formData.get(urlKey) as string
+        try {
+          const pdfText = await extractTextFromPdfUrl(s3url)
+          const cleaned = cleanExtractedText(pdfText);
+          companyAttachmentTexts.push(
+            `COMPANY ATTACHMENT (PDF: ${cleaned}`
+          );
+        } catch (e: any) {
+          console.error(`[extract_questions_chat] Error fetching ${urlKey}:`, e)
+          companyAttachmentTexts.push(
+            `COMPANY ATTACHMENT (URL: ${s3url}) fetch error: ${e.message}`
+          )
         }
-        break;
       }
 
       // ── Step 2: GRANT FIELDS ───────────────────────────────────────────────
@@ -156,17 +152,21 @@ export async function POST(request: Request) {
       // ── (B) Extract text from Grant Guidelines (PDF or link)
       let guidelinesText = "";
       if (guidelinesFile && guidelinesFile.size > 0) {
-        guidelinesText = await extractTextFromPDF(guidelinesFile);
+        const raw = await extractTextFromPDF(guidelinesFile);
+        guidelinesText = cleanExtractedText(raw);
       } else if (guidelinesLink.trim()) {
-        guidelinesText = await extractTextFromWeb(guidelinesLink.trim());
+        const raw = await extractTextFromWeb(guidelinesLink.trim());
+        guidelinesText = cleanExtractedText(raw);
       }
 
       // ── (C) Extract text from Application Form (PDF or link)
       let applicationFormText = "";
       if (applicationFormFile && applicationFormFile.size > 0) {
-        applicationFormText = await extractTextFromPDF(applicationFormFile);
+        const raw = await extractTextFromPDF(applicationFormFile);
+        applicationFormText = cleanExtractedText(raw);
       } else if (applicationFormLink.trim()) {
-        applicationFormText = await extractTextFromWeb(applicationFormLink.trim());
+        const raw = await extractTextFromWeb(applicationFormLink.trim());
+        applicationFormText = cleanExtractedText(raw);
       }
 
       // ── (D) Build combinedFormText exactly like /api/extract_all_text did
@@ -197,6 +197,8 @@ export async function POST(request: Request) {
         sections.push(`---\nCOMPANY ATTACHMENTS:\n${companyAttachmentTexts.join("\n\n")}`);
       }
 
+      console.log("company attachments text:", companyAttachmentTexts.join("\n\n"))
+
       // 4) BUDGET DETAILS
       sections.push(`---\nBUDGET DETAILS:
 - Allocation Details: ${allocationDetails}`);
@@ -216,6 +218,8 @@ export async function POST(request: Request) {
         "[/api/extract_questions_chat] CombinedFormText length:",
         combinedFormText.length
       );
+
+
 
 
     } else {
@@ -241,57 +245,191 @@ export async function POST(request: Request) {
   }
 
   try {
-    // ── (F) If there's no system message yet, build it now ─────────────────
-    const hasSystemAlready = messages.some((m) => m.role === "system");
+    //     // ── (F) If there's no system message yet, build it now ─────────────────
+    //     const hasSystemAlready = messages.some((m) => m.role === "system");
 
-    if (!hasSystemAlready) {
-      const systemPrompt = `
-You are an AI assistant whose job is to read a grant application form and ask exactly _one_ missing question at a time, in plain conversational English. At each turn, do the following:
+    //     if (!hasSystemAlready) {
+    //   const systemPrompt = `
+    // You are an AI assistant whose job is to read a grant application form and ask exactly _one_ missing question at a time, in plain conversational English. At each turn, do the following:
 
-1. Read the entire form content below.
-2. Ask exactly one required question from the form—phrase it as a natural‐language sentence (for example, “What is your project’s start date?”).
-3. Do NOT prefix with any numbering, headings, or markdown. Just ask one question, naturally.
-4. If there are no further questions left, output exactly:
-### NO_MORE_QUESTIONS
-and nothing else.
+    // 1. Read the entire form content below.
+    // 2. Ask exactly one required question from the form—phrase it as a natural‐language sentence (for example, “What is your project’s start date?”).
+    // 3. Do NOT prefix with any numbering, headings, or markdown. Just ask one question, naturally.
+    // 4. If there are no further questions left, output exactly:
+    // ### NO_MORE_QUESTIONS
+    // and nothing else.
+
+    // FORM TEXT:
+    // ${combinedFormText}
+    // `.trim();
+
+    //       messages.unshift({ role: "system", content: systemPrompt });
+
+    //     }
+
+    //     // ── (G) Now invoke GPT‐4o in streaming mode ───────────────────────────
+    //     const { textStream } = await streamText({
+    //       model: openai("gpt-4o"),
+    //       messages: messages.map((m) => ({
+    //         role: m.role,
+    //         content: m.content,
+    //       })),
+    //     });
+
+    //     const reader = textStream.getReader();
+    //     const streamResponse = new ReadableStream({
+    //       async start(controller) {
+    //         try {
+    //           while (true) {
+    //             const { done, value } = await reader.read();
+    //             if (done) break;
+    //             controller.enqueue(value);
+    //           }
+    //           controller.close();
+    //         } catch (e) {
+    //           console.error("Error during streaming:", e);
+    //           controller.error(e);
+    //         }
+    //       },
+    //     });
+
+    //     return new NextResponse(streamResponse, {
+    //       headers: { "Content-Type": "text/plain; charset=UTF-8" },
+    //     });
+
+    // - Contact names or personal names
+
+    // const systemPrompt = `
+    // You are a grant application assistant. Your job is to generate **essential missing questions** that the user must answer to complete their grant application.
+
+    // You have two inputs:
+    // 1) What the user has already provided.
+    // 2) Everything extracted from the grant: (guidelines, scraped website, application form).
+    // ${combinedFormText}
+
+    // After processing all user-provided responses, attachments, and the grant application form, do the following:
+
+    // 1. **Compare** the required questions and fields from the form with what the user already provided.
+    // 2. **Ignore** administrative or personal questions that will be handled manually. Do NOT ask for:
+    //   - Email addresses
+    //   - Phone numbers
+    //   - Signatures
+    //   - Tax/registration numbers (e.g., ABN)
+    //   - File uploads
+    //   - Photos
+    // 3. Only include **questions that require a written text-based answer**.
+    // 4. Keep each question:
+    //   - Short and to the point
+    //   - One sentence long
+    //   - Written in a conversational tone
+
+    // Return the result as a JSON object:
+    // {
+    //   "questions": [
+    //     "What is your project timeline?",
+    //     "How will the funding be used?",
+    //     ...
+    //   ]
+    // }
+
+    // Only include truly missing, essential questions. Questions must be one-sentence each, straight to the point
+      
+    // FORM TEXT:
+    // ${combinedFormText}
+    // `.trim();
+
+    const systemPrompt = `
+You are a grant application assistant. Your job is to generate only the **essential missing questions** that the user must answer to complete their grant application.
+
+You are given:
+1. The full text of the grant application form and its required fields.
+2. The answers and information the user has already provided.
+3. Any attached files or extracted content from company websites, guidelines, and application forms.
+
+Your task is to:
+✅ Identify any **required questions or fields** that are **not yet answered**  
+❌ Do NOT repeat questions that are already answered in full  
+❌ Do NOT ask about project descriptions, background, problem/solution, sector, or status if these are clearly provided  
+❌ Do NOT ask for administrative or manual fields like:
+  - Email addresses
+  - Phone numbers
+  - Signatures
+  - Registration/tax numbers
+  - File uploads
+  - Personal bios
+✅ Only include **questions that require a meaningful written response** (text-based, not checkboxes or files)
+
+You must:
+- Return each question as a short, natural, one-sentence prompt
+- Keep the tone conversational and professional
+- Skip all duplicates and overexplained fields
+
+Use this list to filter out redundant questions:
+> Do NOT ask about:
+- Project description
+- Product overview
+- Problem being solved
+- Market opportunity
+- Sector or track
+- Company background
+- Target customers
+- Unique value proposition
+- Solution or how the product works
+- Current product stage or funding status
+
+Only ask what’s truly missing, such as:
+- Timeline
+- Key milestones
+- Long-term vision
+- Go-to-market plan
+- Risks & challenges
+- Metrics for success
+- User acquisition & retention
+- Revenue model
+- Partnerships
+- Any questions required in the grant form but not yet covered
+
+Return your result in this format:
+
+{
+  "questions": [
+    "What is your project timeline?",
+    "What are your key milestones for the next 12 months?",
+    ...
+  ]
+}
 
 FORM TEXT:
 ${combinedFormText}
 `.trim();
 
-      messages.unshift({ role: "system", content: systemPrompt });
 
+    const { object } = await generateObject({
+      model: openai('o3-mini'),
+      schema: questionsSchema,
+      prompt: systemPrompt,
+      temperature: 0
+    });
+
+    // 5) Validate the returned object
+    const safe = questionsSchema.safeParse(object);
+    if (!safe.success) {
+      console.error("Invalid output from GPT:", object);
+      return NextResponse.json(
+        { error: "Failed to generate questions" },
+        { status: 500 }
+      );
     }
 
-    // ── (G) Now invoke GPT‐4o in streaming mode ───────────────────────────
-    const { textStream } = await streamText({
-      model: openai("gpt-4o"),
-      messages: messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-    });
-
-    const reader = textStream.getReader();
-    const streamResponse = new ReadableStream({
-      async start(controller) {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            controller.enqueue(value);
-          }
-          controller.close();
-        } catch (e) {
-          console.error("Error during streaming:", e);
-          controller.error(e);
-        }
-      },
-    });
-
-    return new NextResponse(streamResponse, {
-      headers: { "Content-Type": "text/plain; charset=UTF-8" },
-    });
+    // 6) Return the questions array to the client
+    // return NextResponse.json(
+    //   { questions: safe.data.questions },
+    //   { status: 200 }
+    // );
+    return NextResponse.json({
+      combinedFormText,
+      questions: safe.data.questions
+    }, { status: 200 });
   } catch (err: any) {
     console.error("[/api/extract_questions_chat] Unexpected error:", err);
     return NextResponse.json(

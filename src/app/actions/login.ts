@@ -5,6 +5,8 @@ import { AuthError } from "next-auth";
 import { signIn } from "../../../auth";
 import { client } from "@/lib/prisma";
 import { SignInSchema } from "@/components/form/login";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { redirect } from "next/navigation";
 
 export const login = async (
   values: z.infer<typeof SignInSchema>,
@@ -32,13 +34,18 @@ export const login = async (
     const result = await signIn("credentials", {
       email,
       password,
-      redirectTo: callbackUrl || "/home",
+      redirectTo: callbackUrl || "/new-application",
     });
 
     console.log("SignIn Result:", result); // Log the result from signIn
     return result;
 
   } catch (error) {
+    if (isRedirectError(error)) {
+      return;
+    }
+
+
     if (error instanceof AuthError) {
       console.error("AuthError:", error); // Log AuthError with specific error type
       switch (error.type) {
@@ -51,5 +58,6 @@ export const login = async (
 
     console.error("Unexpected Error:", error); // Log unexpected errors
     throw error;
+
   }
 };

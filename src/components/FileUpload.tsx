@@ -30,7 +30,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // How many more can we accept?
     const slotsLeft = maxFiles - (existingFiles.length + newFiles.length);
 
     const isValidFileType = (file: File) => {
@@ -39,10 +38,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
         ];
         return validTypes.includes(file.type);
     };
-
-    // useEffect(() => {
-    //     onFileChange(newFiles);
-    // }, [newFiles, onFileChange]);
 
     useEffect(() => {
         if (newFiles.length === 0) return;
@@ -55,9 +50,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
         }
     }, [existingFiles]);
 
-    // useEffect(() => {
-    //     onFileChange(newFiles);
-    // }, [newFiles, onFileChange]);
 
 
     const handleFileSelection = (selectedFiles: File[]) => {
@@ -67,7 +59,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
         if (invalid.length > 0) {
             setError("Only PDF files are allowed.");
-            // drop invalid ones
         } else {
             setError(null);
         }
@@ -75,7 +66,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
         const merged = [...newFiles, ...validPdfs];
 
 
-        // Slice to first 3
         const sliced = merged.slice(0, maxFiles - existingFiles.length);
         setNewFiles(sliced);
         onFileChange(sliced);
@@ -118,7 +108,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
         onRemoveExisting?.(key);
     };
 
-    // Download a "new" File locally
     const handleDownloadNewFile = (file: File) => {
         const url = URL.createObjectURL(file);
         const link = document.createElement("a");
@@ -145,7 +134,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                onClick={handleClick} // Handle click to open file selection dialog
+                onClick={handleClick} 
             >
 
 
@@ -169,9 +158,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 </p>
 
 
-                {/* Hidden file input */}
                 <Input
-                    ref={fileInputRef} // Reference to trigger file input programmatically
+                    ref={fileInputRef}
                     type="file"
                     accept={acceptedTypes}
                     multiple={false}
@@ -192,15 +180,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
                                     <div className="text-sm font-medium text-[#6D6D6D]">{att.name}</div>
                                 </div>
                             </div>
-                            {/* <a
-                                href={att.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center space-x-2 text-white hover:underline"
-                            >
-                                <Paperclip className="h-5 w-5 text-[#6D6D6D]" />
-                                <span className="text-sm font-medium">{att.name}</span>
-                            </a> */}
                             {onRemoveExisting && (
                                 <Button variant="ghost" size="icon" onClick={() => handleRemoveExistingClick(att.key)}>
                                     <Trash2 className="h-4 w-4 text-orange-600" />
@@ -222,9 +201,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
                                 </div>
                             </div>
                             <div className="flex items-center space-x-2">
-                                {/* <Button variant="ghost" size="icon" onClick={() => handleDownloadNewFile(file)}>
-                                <Download className="h-4 w-4 text-text-[#6D6D6D]" />
-                            </Button> */}
                                 <Button variant="ghost" size="icon" onClick={() => handleRemoveNewFile(file)}>
                                     <Trash2 className="h-4 w-4 text-orange-600" />
                                 </Button>

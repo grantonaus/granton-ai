@@ -18,18 +18,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { Loader } from "./Loader";
 
-// 1) Zod schema: only “allocationDetails” is required
 const budgetSchema = z.object({
   allocationDetails: z.string().min(1, "Allocation details are required"),
 });
 export type BudgetDetailsData = z.infer<typeof budgetSchema>;
 
-// blank defaults so inputs never undefined
 const blankBudget: BudgetDetailsData = {
   allocationDetails: "",
 };
-
-// 2) Default content for “Grant Requirements”
 const defaultGrantRequirements = `
 Eligible Expenses include:
 Consultants
@@ -69,12 +65,7 @@ export default function BudgetDetailsDetails({
   };
 
   return (
-    // ── 5) Entire step = flex‐column, fill available height ──
     <div className="flex flex-col h-full">
-      {/* 
-        ── 6) Scrollable form content: flex‐1 + overflow-auto ── 
-        We give a little bottom padding so that the footer doesn’t cover the last field.
-      */}
       <div className="flex-1 overflow-auto pt-4 pb-8">
         <Form {...form}>
 
@@ -83,7 +74,6 @@ export default function BudgetDetailsDetails({
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-4 max-w-[960px] mx-auto"
           >
-            {/* Info banner */}
             <div className="flex">
               <div className="w-auto font-semibold p-3 rounded-md text-[15px] bg-[#191C19] text-[#68FC92]">
                 Amount Applying For: ${grantValues?.amountApplyingFor}
@@ -91,7 +81,6 @@ export default function BudgetDetailsDetails({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 pt-4">
-              {/* Allocation Details Textarea (left column) */}
               <div className="col-span-1 md:col-span-6">
                 <FormField
                   control={form.control}
@@ -131,11 +120,9 @@ export default function BudgetDetailsDetails({
                         rounded-md
                       "
                     >
-                      {/* {defaultGrantRequirements} */}
 
                       {grantRequirements || (
                         <span className="text-[#444444] italic">
-                          {/* If nothing was passed, show a placeholder */}
                           (No requirements found. The AI response will appear here.)
                         </span>
                       )}
@@ -148,11 +135,6 @@ export default function BudgetDetailsDetails({
         </Form>
       </div>
 
-      {/* 
-        ── 7) Footer (Back/Continue) sits below the scrollable area. ── 
-        It never scrolls away because it is a sibling of the scrollable div,
-        inside a flex‐column whose parent hides overflow.
-      */}
       <div className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8">
         <div className="max-w-[960px] mx-auto flex justify-between gap-4">
           <Button
@@ -162,10 +144,7 @@ export default function BudgetDetailsDetails({
           >
             Back
           </Button>
-          {/*
-            3) By adding form="stepForm", this button (even though it lives
-               outside the <form> tag) will still submit that form.
-          */}
+
           <Button
             type="submit"
             form="stepForm"

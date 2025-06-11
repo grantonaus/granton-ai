@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, PackageOpen } from "lucide-react";
+import { Search } from "lucide-react";
 import { ContentLayout } from "@/components/ContentLayout";
 import ApplicationCard from "@/components/ApplicationCard";
 import Spinner from "@/components/Spinner";
@@ -45,14 +45,13 @@ const PastApplicationsPage = () => {
 
   return (
     <ContentLayout title="Past Applications">
-      {/* Outer wrapper: max‐width + centering */}
       <div className="w-full max-w-[1000px] px-5 mx-auto mt-2 md:mt-4">
         {/* Sticky search bar */}
         <div className="sticky top-0 z-10 w-full py-3 bg-background">
-          <div className="relative flex items-center w-full">
+          <div className="relative flex items-center">
             <Search
               strokeWidth={2}
-              className="absolute right-5 size-5 text-[#3A3A3A]"
+              className="absolute right-5 text-[#3A3A3A] size-5"
             />
             <Input
               className="w-full"
@@ -63,15 +62,14 @@ const PastApplicationsPage = () => {
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center min-h-[70vh]">
+        {/* Results area */}
+        <div className="mt-4 min-h-[70vh] flex flex-col">
           {loading ? (
-            // Loading spinner, centered both ways
-            <div className="flex flex-col items-center justify-center">
+            <div className="flex-grow flex items-center justify-center">
               <Spinner />
             </div>
           ) : filteredApplications.length === 0 ? (
-            // No results — centered both ways, with a bit of space for the icon + text
-            <div className="flex flex-col items-center justify-center space-y-4">
+            <div className="flex-grow flex flex-col items-center justify-center space-y-2">
               <p className="text-muted-foreground text-base">
                 {applications.length === 0
                   ? "You have no applications yet."
@@ -79,8 +77,7 @@ const PastApplicationsPage = () => {
               </p>
             </div>
           ) : (
-            // If we do have results, show the grid
-            <div className="w-full mt-4 grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 md:gap-5">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 md:gap-5">
               {filteredApplications.map((app) => (
                 <ApplicationCard key={app.id} application={app} />
               ))}

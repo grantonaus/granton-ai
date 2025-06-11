@@ -4,14 +4,12 @@ import { Button } from "@/components/ui/button"
 import { signIn } from "next-auth/react"
 import { handleGoogleSignin } from "@/app/actions/google-auth"
 import { Loader } from "./Loader"
-// import { useGoogleAuth } from "@/app/hooks/authentication"
 
 type GoogleAuthButtonProps = {
   method: "signup" | "signin"
 }
 
 export const GoogleAuthButton = ({ method }: GoogleAuthButtonProps) => {
-  // const { signUpWith, signInWith } = useGoogleAuth()
   return (
     <Button
       onClick={handleGoogleSignin}

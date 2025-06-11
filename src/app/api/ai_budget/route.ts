@@ -134,7 +134,8 @@ Be precise. Use exact language from the guidelines where relevant. If caps or co
 
     // Call Vercel AI SDK
     const aiResponse = await generateText({
-      model: openai('gpt-4o'),
+      // model: openai('o1-mini'),
+      model: openai('gpt-4.1-nano'),
       prompt: systemPrompt,
     });
 

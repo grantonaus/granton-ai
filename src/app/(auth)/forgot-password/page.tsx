@@ -1,4 +1,3 @@
-// app/forgot-password/page.tsx
 "use client";
 
 import React, { useState, useTransition } from "react";
@@ -29,14 +28,11 @@ import { reset } from "@/app/actions/reset";
 type PasswordResetFormValues = z.infer<typeof PasswordResetSchema>;
 
 export default function ForgotPasswordPage() {
-  // Local state for error / success
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
 
-  // useTransition to manage loader on the button
   const [isPending, startTransition] = useTransition();
 
-  // react-hook-form setup
   const form = useForm<PasswordResetFormValues>({
     resolver: zodResolver(PasswordResetSchema),
     defaultValues: { email: "" },
@@ -80,7 +76,6 @@ export default function ForgotPasswordPage() {
 
       <Form {...form}>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
-          {/* Email */}
           <FormField
             control={control}
             name="email"
@@ -100,11 +95,9 @@ export default function ForgotPasswordPage() {
             )}
           />
 
-          {/* Error / Success */}
           {error && <FormError message={error} />}
           {success && <FormSuccess message={success} />}
 
-          {/* Submit Button with Loader */}
           <Button
             type="submit"
             className="w-full h-10 font-bold text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 mt-2 rounded-md"

@@ -19,13 +19,10 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Loader } from "./Loader";
 
-// ─── 1) Define Zod schema for Personal Details ─────────────────────────────
 const personalSchema = z.object({
-    // Section 1: Primary Contact
     primary_first_name: z.string().min(1, "First name is required"),
     primary_last_name: z.string().min(1, "Last name is required"),
 
-    // Section 2: Main Contact for Project
     contact_salutation: z.string().min(1, "Salutation is required"),
     contact_job_title: z.string().min(1, "Job title is required"),
     contact_first_name: z.string().min(1, "First name is required"),
@@ -36,7 +33,6 @@ const personalSchema = z.object({
 
 export type PersonalDetailsData = z.infer<typeof personalSchema>;
 
-// Blank defaults so form fields never undefined
 const blankPersonal: PersonalDetailsData = {
     primary_first_name: "",
     primary_last_name: "",
@@ -49,15 +45,7 @@ const blankPersonal: PersonalDetailsData = {
 };
 
 interface PersonalDetailsProps {
-    /**
-     * Called when user clicks “Save Changes” and validation passes.
-     * Receives the form values as payload.
-     */
     onSave: (data: PersonalDetailsData) => void;
-
-    /**
-     * Optional default values pulled from some API or local state.
-     */
     defaultValues?: Partial<PersonalDetailsData>;
 }
 
@@ -91,7 +79,6 @@ export default function PersonalDetails({
     
           toast.success("Personal details saved successfully!");
           setIsSaving(false);
-          // Optionally revalidate SWR or parent state here…
         } catch (err) {
           console.error("Unexpected error", err);
           toast.error("Unexpected error. Please try again.");
@@ -101,14 +88,12 @@ export default function PersonalDetails({
 
     return (
         <div className="flex flex-col h-full">
-            {/* ── Scrollable form region ──────────────────────────────────────────── */}
             <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-8 mt-2 md:mt-5">
                 <Form {...form}>
                     <form
                         onSubmit={form.handleSubmit(handleSave)}
                         className="space-y-8 md:space-y-12 max-w-[960px] mx-auto"
                     >
-                        {/* ── Section 1: Primary Contact ────────────────────────────────────── */}
                         <div className="space-y-2">
                             <p className="text-[16px] font-bold text-white mb-6">Primary Contact</p>
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -153,8 +138,6 @@ export default function PersonalDetails({
                             </div>
                         </div>
 
-                        {/* ── Section 2: Main Contact for Project ───────────────────────────── */}
-                        {/* ── Section 2: Main Contact for Project ───────────────────────────── */}
                         <div className="space-y-2">
                             <p className="text-[16px] font-bold text-white mb-6">
                                 Main Contact for Project
@@ -287,7 +270,6 @@ export default function PersonalDetails({
                 </Form>
             </div>
 
-            {/* ── Fixed footer at bottom: “Save Changes” ────────────────────────────── */}
             <div className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8">
                 <div className="max-w-[1000px] mx-auto flex justify-between gap-4 px-5">
                     <Button

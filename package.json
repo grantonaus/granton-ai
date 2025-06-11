@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "NEXT_TURBOPACK=false next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -33,7 +33,6 @@
     "@stripe/stripe-js": "^7.3.1",
     "@supabase/supabase-js": "^2.49.9",
     "ai": "^4.3.16",
-    "aws-sdk": "^2.1692.0",
     "bcryptjs": "^3.0.2",
     "cheerio": "^1.0.0",
     "class-variance-authority": "^0.7.1",
@@ -47,7 +46,6 @@
     "next-auth": "^5.0.0-beta.18",
     "node-fetch": "^3.3.2",
     "pdf-parse": "^1.1.1",
-    "pdf-parse-debugging-disabled": "^1.1.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-dropzone": "^14.3.8",
