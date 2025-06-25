@@ -3,7 +3,8 @@ import {
   NewApplicationIcon,
   CompanyDetailsIcon,
   PastApplicationsIcon,
-  PersonalDetailsIcon
+  PersonalDetailsIcon,
+  MatchingGrantsIcon
 } from "@/icons";
 import { Bookmark, GalleryVertical } from "lucide-react";
 
@@ -47,6 +48,13 @@ export function getMenuList(
           label: "New Application",
           active: pathname.startsWith("/new-application"),
           icon: NewApplicationIcon,
+          submenus: []
+        },
+        {
+          href: "/matching-grants",
+          label: "Matching Grants",
+          active: pathname.startsWith("/matching-grants"),
+          icon: MatchingGrantsIcon,
           submenus: []
         },
         {

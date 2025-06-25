@@ -19,6 +19,7 @@
     "^/past-applications$",
     "^/company-details$",
     "^/personal-details$",
+    "^/matching-grants$",
   ];
   
   /**

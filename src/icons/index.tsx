@@ -209,7 +209,39 @@ export const PastApplicationsIcon: React.FC<SVGIconProps> = ({
 
 
 
-
+// /icons/index.tsx
+export const MatchingGrantsIcon: React.FC<SVGIconProps> = ({
+    size = 24,
+    ...props
+  }) => (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 22 22"
+      fill="none"
+      style={{ width: size, height: size }}
+      {...props}
+    >
+      {/* Background */}
+      <rect
+        width="22"
+        height="22"
+        rx="6.6"
+        fill="currentColor"
+        fillOpacity="0.1"
+      />
+      {/* Arrow icon for matching logic */}
+      <path
+        d="M12.0077 10.2895C11.8972 10.2895 11.8077 10.2 11.8077 10.0895V7.0558C11.8077 6.86835 11.573 6.7839 11.4535 6.92837L8.17675 10.8919C7.90722 11.2179 8.13911 11.7105 8.56211 11.7105H9.99231C10.1028 11.7105 10.1923 11.8 10.1923 11.9105V14.9442C10.1923 15.1316 10.427 15.2161 10.5465 15.0716L13.8232 11.1081C14.0928 10.7821 13.8609 10.2895 13.4379 10.2895H12.0077Z"
+        fill="currentColor"
+        fillOpacity="0.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeOpacity="0.5"
+      />
+    </svg>
+  );
+  
 
 
 //   <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
