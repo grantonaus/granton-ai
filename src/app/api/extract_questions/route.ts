@@ -23,6 +23,63 @@ const chatContinuationSchema = z.object({
 });
 
 
+/**
+ * Try to coerce an arbitrary string into a working absolute URL.
+ * - Adds https:// or http:// if missing.
+ * - Optionally probes the URL to make sure the host responds.
+ *   (HEAD first, then GET fallback because some sites block HEAD.)
+ *
+ * @param raw       Whatever the user supplied.
+ * @param probe     When true, make a network request to be extra-sure.
+ * @returns         A *validated, reachable* URL string, or null if hopeless.
+ */
+export async function fixAndValidateUrl(
+  raw: string | undefined | null,
+  probe = false
+): Promise<string | null> {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // 🅰️  Already looks like a full URL?
+  try {
+    const u = new URL(trimmed);
+    if (!probe) return u.href;
+    if (await isReachable(u)) return u.href;
+  } catch { /* fall through */ }
+
+  // 🅱️  Missing scheme → try https:// + http://
+  for (const scheme of ["https://", "http://"]) {
+    try {
+      const candidate = new URL(scheme + trimmed);
+      if (!probe) return candidate.href;
+      if (await isReachable(candidate)) return candidate.href;
+    } catch {
+      /* ignore, keep looping */
+    }
+  }
+
+  // 🅾️  Everything failed
+  return null;
+}
+
+/** Simple reachability check (HEAD, fallback to GET) */
+async function isReachable(u: URL): Promise<boolean> {
+  try {
+    const res = await fetch(u, { method: "HEAD", redirect: "follow" });
+    if (res.ok) return true;
+    // Some servers reject HEAD; try GET but abort quickly (~3 s)
+    const ctrl = new AbortController();
+    const id = setTimeout(() => ctrl.abort(), 3000);
+    const resGet = await fetch(u, { method: "GET", redirect: "follow", signal: ctrl.signal });
+    clearTimeout(id);
+    return resGet.ok;
+  } catch {
+    return false;
+  }
+}
+
+
 
 
 async function extractTextFromWeb(url: string): Promise<string> {
@@ -141,10 +198,23 @@ export async function POST(request: Request) {
       const allocationDetails = (formData.get("allocation_details") as string) || "";
 
       let companyWebsiteText = "";
-      if (websiteUrl.trim()) {
-        companyWebsiteText = await extractTextFromWeb(websiteUrl.trim());
-        console.log(`[extract_questions_chat] Extracted ${companyWebsiteText.length} chars from company website.`);
+      // if (websiteUrl.trim()) {
+      //   companyWebsiteText = await extractTextFromWeb(websiteUrl.trim());
+      //   console.log(`[extract_questions_chat] Extracted ${companyWebsiteText.length} chars from company website.`);
+      // }
+      // if (isValidUrl(websiteUrl)) {
+      //   companyWebsiteText = await extractTextFromWeb(websiteUrl);
+      // } else {
+      //   console.warn(`[extract_questions_chat] Skipping invalid website URL: ${websiteUrl}`);
+      // }
+
+      const fixedWebsite = await fixAndValidateUrl(websiteUrl, true);
+      if (fixedWebsite) {
+        companyWebsiteText = await extractTextFromWeb(fixedWebsite);
+      } else if (websiteUrl.trim()) {
+        console.warn(`[extract_questions_chat] Skipping invalid website URL: "${websiteUrl}"`);
       }
+
 
       // ── (B) Extract text from Grant Guidelines (PDF or link)
       let guidelinesText = "";

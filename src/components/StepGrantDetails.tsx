@@ -19,13 +19,22 @@ import { FileUploader, FileInput, FileUploaderContent, FileUploaderItem } from "
 
 import FileUpload from "./FileUpload"
 import { Loader } from "./Loader"
+import { URL } from "url"
 
 
 const grantDetailsSchema = z
   .object({
-    grantLink: z.string().refine(val => /^((https?:\/\/)?[\w.-]+\.[a-zA-Z]{2,})$/.test(val), {
-      message: "Must be a valid website URL",
-    }),
+    // grantLink: z.string().refine((val) => {
+    //   try {
+    //     new URL(val);
+    //     return true;
+    //   } catch {
+    //     return false;
+    //   }
+    // }, {
+    //   message: "Must be a valid website URL",
+    // }), 
+    grantLink: z.string().min(2, "Must be a valid URL"),
     amountApplyingFor: z.string().min(1, "Required"),
     guidelinesFile: z
       .instanceof(File)
