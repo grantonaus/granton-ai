@@ -1,6 +1,3 @@
-
-// File: /app/api/extract_questions_chat/route.ts
-
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import fetch from "node-fetch";
@@ -245,99 +242,6 @@ export async function POST(request: Request) {
   }
 
   try {
-    //     // ── (F) If there's no system message yet, build it now ─────────────────
-    //     const hasSystemAlready = messages.some((m) => m.role === "system");
-
-    //     if (!hasSystemAlready) {
-    //   const systemPrompt = `
-    // You are an AI assistant whose job is to read a grant application form and ask exactly _one_ missing question at a time, in plain conversational English. At each turn, do the following:
-
-    // 1. Read the entire form content below.
-    // 2. Ask exactly one required question from the form—phrase it as a natural‐language sentence (for example, “What is your project’s start date?”).
-    // 3. Do NOT prefix with any numbering, headings, or markdown. Just ask one question, naturally.
-    // 4. If there are no further questions left, output exactly:
-    // ### NO_MORE_QUESTIONS
-    // and nothing else.
-
-    // FORM TEXT:
-    // ${combinedFormText}
-    // `.trim();
-
-    //       messages.unshift({ role: "system", content: systemPrompt });
-
-    //     }
-
-    //     // ── (G) Now invoke GPT‐4o in streaming mode ───────────────────────────
-    //     const { textStream } = await streamText({
-    //       model: openai("gpt-4o"),
-    //       messages: messages.map((m) => ({
-    //         role: m.role,
-    //         content: m.content,
-    //       })),
-    //     });
-
-    //     const reader = textStream.getReader();
-    //     const streamResponse = new ReadableStream({
-    //       async start(controller) {
-    //         try {
-    //           while (true) {
-    //             const { done, value } = await reader.read();
-    //             if (done) break;
-    //             controller.enqueue(value);
-    //           }
-    //           controller.close();
-    //         } catch (e) {
-    //           console.error("Error during streaming:", e);
-    //           controller.error(e);
-    //         }
-    //       },
-    //     });
-
-    //     return new NextResponse(streamResponse, {
-    //       headers: { "Content-Type": "text/plain; charset=UTF-8" },
-    //     });
-
-    // - Contact names or personal names
-
-    // const systemPrompt = `
-    // You are a grant application assistant. Your job is to generate **essential missing questions** that the user must answer to complete their grant application.
-
-    // You have two inputs:
-    // 1) What the user has already provided.
-    // 2) Everything extracted from the grant: (guidelines, scraped website, application form).
-    // ${combinedFormText}
-
-    // After processing all user-provided responses, attachments, and the grant application form, do the following:
-
-    // 1. **Compare** the required questions and fields from the form with what the user already provided.
-    // 2. **Ignore** administrative or personal questions that will be handled manually. Do NOT ask for:
-    //   - Email addresses
-    //   - Phone numbers
-    //   - Signatures
-    //   - Tax/registration numbers (e.g., ABN)
-    //   - File uploads
-    //   - Photos
-    // 3. Only include **questions that require a written text-based answer**.
-    // 4. Keep each question:
-    //   - Short and to the point
-    //   - One sentence long
-    //   - Written in a conversational tone
-
-    // Return the result as a JSON object:
-    // {
-    //   "questions": [
-    //     "What is your project timeline?",
-    //     "How will the funding be used?",
-    //     ...
-    //   ]
-    // }
-
-    // Only include truly missing, essential questions. Questions must be one-sentence each, straight to the point
-      
-    // FORM TEXT:
-    // ${combinedFormText}
-    // `.trim();
-
     const systemPrompt = `
 You are a grant application assistant. Your job is to generate only the **essential missing questions** that the user must answer to complete their grant application.
 
@@ -421,11 +325,6 @@ ${combinedFormText}
       );
     }
 
-    // 6) Return the questions array to the client
-    // return NextResponse.json(
-    //   { questions: safe.data.questions },
-    //   { status: 200 }
-    // );
     return NextResponse.json({
       combinedFormText,
       questions: safe.data.questions

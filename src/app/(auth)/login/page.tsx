@@ -80,13 +80,13 @@ const LoginPage = () => {
 
   return (
     <div className="max-w-lg p-7 mt-14 rounded-xl bg-[#0f0f0f] border border-[#1C1C1C]">
-      <h5 className="font-black text-xl text-white">Welcome back</h5>
-      <div className="font-medium text-[#444444] text-[16px] leading-snug mt-1 mb-6">
+      <h5 className="font-black text-xl text-white">Log In</h5>
+      {/* <div className="font-medium text-[#444444] text-[16px] leading-snug mt-1 mb-6">
         Log in to continue and get matched with grants faster.
-      </div>
+      </div> */}
 
       <Form {...form}>
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3 mt-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3 mt-5">
           <FormField
             control={control}
             name="email"

@@ -173,11 +173,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
             {existingFiles.length > 0 && (
                 <div className="mt-3 space-y-3">
                     {existingFiles.map((att) => (
-                        <div key={att.key} className="flex items-center justify-between bg-[#121212] rounded-md px-4 py-1">
+                        <div key={att.key} className="flex items-center justify-between bg-[#191C1C] rounded-md px-4 py-1">
                             <div className="flex items-center space-x-2">
-                                <Paperclip className="size-4 text-[#6D6D6D] mr-2" />
+                                <Paperclip className="size-4 text-[#68FCF2] mr-2" />
                                 <div>
-                                    <div className="text-sm font-medium text-[#6D6D6D]">{att.name}</div>
+                                    <div className="text-sm font-medium text-[#68FCF2]">{att.name}</div>
                                 </div>
                             </div>
                             {onRemoveExisting && (
@@ -193,11 +193,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
             {newFiles.length > 0 && (
                 <div className="mt-3 space-y-3">
                     {newFiles.map((file, idx) => (
-                        <div key={`new-${idx}`} className="flex items-center justify-between bg-[#121212] rounded-md px-4 py-1">
+                        <div key={`new-${idx}`} className="flex items-center justify-between bg-[#191C1C] rounded-md px-4 py-1">
                             <div className="flex items-center space-x-2">
-                                <Paperclip className="size-4 text-[#6D6D6D] mr-2" />
+                                <Paperclip className="size-4 text-[#68FCF2D] mr-2" />
                                 <div>
-                                    <div className="text-sm font-medium text-[#6D6D6D]">{file.name}</div>
+                                    <div className="text-sm font-medium text-[#68FCF2]">{file.name}</div>
                                 </div>
                             </div>
                             <div className="flex items-center space-x-2">

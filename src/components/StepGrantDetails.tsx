@@ -23,21 +23,23 @@ import { Loader } from "./Loader"
 
 const grantDetailsSchema = z
   .object({
-    grantLink: z.string().url("Must be a valid URL"),
+    grantLink: z.string().refine(val => /^((https?:\/\/)?[\w.-]+\.[a-zA-Z]{2,})$/.test(val), {
+      message: "Must be a valid website URL",
+    }),
     amountApplyingFor: z.string().min(1, "Required"),
     guidelinesFile: z
       .instanceof(File)
       .refine((f) => f.type === "application/pdf", "Only PDF allowed")
       .optional(),
     guidelinesLink: z
-      .union([z.string().url("Must be a valid URL"), z.literal("")])
+      .union([z.string().min(2, "Must be a valid URL"), z.literal("")])
       .optional(),
     applicationFormFile: z
       .instanceof(File)
       .refine((f) => f.type === "application/pdf", "Only PDF allowed")
       .optional(),
     applicationFormLink: z
-      .union([z.string().url("Must be a valid URL"), z.literal("")])
+      .union([z.string().min(2, "Must be a valid URL"), z.literal("")])
       .optional(),
   })
   .refine(

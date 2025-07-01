@@ -1,56 +1,48 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-arm64-openssl-1.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  // directUrl     = env("DIRECT_URL")
 }
 
 /// The user of the system, storing personal + company info
 model User {
-  id          String   @id @default(cuid())
-  email       String   @unique()
-  password    String
-  firstName   String
-  lastName    String?
-  image       String?
-
-  accounts    Account[]
-
-  hasPaid     Boolean   @default(false)
-  paidAt      DateTime?
-
-  stripeCustomerId String?
-
+  id                                String    @id @default(cuid())
+  email                             String    @unique
+  password                          String
+  firstName                         String
+  lastName                          String?
+  image                             String?
+  hasPaid                           Boolean   @default(false)
+  paidAt                            DateTime?
+  stripeCustomerId                  String?
   /// ─────────── “Personal Details” Fields ───────────
-  contactSalutation  String?
-  contactJobTitle    String?
-  contactFirstName   String?
-  contactLastName    String?
-  contactEmail       String?
-  contactMobile      String?
-
+  contactSalutation                 String?
+  contactJobTitle                   String?
+  contactFirstName                  String?
+  contactLastName                   String?
+  contactEmail                      String?
+  contactMobile                     String?
   /// ─────────── Company Details Fields ───────────
-  companyName                            String?   
-  websiteUrl                             String?   
-  country                                String?  
-  companyBackground                      String?  
-  product                                String?   
-  competitorsUniqueValueProposition      String?   
-  currentStage                           String?   
-  mainObjective                          String?   
-  targetCustomers                        String?   
-  fundingStatus                          String?  
-  attachments                            Json?    
-
-  profileComplete  Boolean   @default(false)
-
-  grants      Grant[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  companyName                       String?
+  websiteUrl                        String?
+  country                           String?
+  companyBackground                 String?
+  product                           String?
+  competitorsUniqueValueProposition String?
+  currentStage                      String?
+  mainObjective                     String?
+  targetCustomers                   String?
+  fundingStatus                     String?
+  attachments                       Json?
+  profileComplete                   Boolean   @default(false)
+  createdAt                         DateTime  @default(now())
+  updatedAt                         DateTime  @updatedAt
+  accounts                          Account[]
+  grants                            Grant[]
 }
 
 model Account {
@@ -59,15 +51,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -82,13 +73,11 @@ model PasswordResetToken {
 }
 
 model Grant {
-  id       String   @id @default(cuid())
-  user     User     @relation(fields: [userId], references: [id])
-  userId   String
-
-  name     String
-  date     DateTime
-  pdfUrl   String
-
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  date      DateTime
+  pdfUrl    String
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }

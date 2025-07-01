@@ -42,7 +42,9 @@ const ExistingAttachment = z.object({
 const Attachment = z.union([PdfFile, ExistingAttachment]);
 
 const companySchema = z.object({
-  website_url: z.string().url("Must be a valid URL"),
+  website_url: z.string().refine(val => /^((https?:\/\/)?[\w.-]+\.[a-zA-Z]{2,})$/.test(val), {
+    message: "Must be a valid website URL",
+  }),
   company_name: z.string().min(1, "Required"),
   country: z.string().min(1, "Required"),
   company_background: z.string().min(1, "Required"),
@@ -108,10 +110,10 @@ export default function StepCompanyDetails({
     defaultValues: defaultValues ?? blankCompany,
   });
 
-  function onSubmit(values: CompanyDetailsData) {
+  async function onSubmit(values: CompanyDetailsData) {
     try {
       setIsSaving(true)
-      onNext(values);
+      await onNext(values);
     } catch (error) {
       console.error("Form submission error", error);
       toast.error("Failed to submit the form. Please try again.");
@@ -384,6 +386,7 @@ export default function StepCompanyDetails({
       <div className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8">
         <div className="max-w-[960px] mx-auto flex justify-between gap-4">
           <Button
+            disabled={isSaving}
             onClick={form.handleSubmit(onSubmit)}
             className="flex-1 h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer"
           >

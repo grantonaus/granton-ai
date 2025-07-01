@@ -89,14 +89,14 @@ const SignUpPage = () => {
   return (
     <div className="max-w-lg p-7 mt-14 rounded-xl bg-[#0f0f0f] border border-[#1C1C1C]">
       <h5 className="font-black text-xl text-white">Create an account</h5>
-      <div className="font-medium text-[#444444] text-[16px] leading-snug mt-1 mb-6">
+      {/* <div className="font-medium text-[#444444] text-[16px] leading-snug mt-1 mb-6">
         Get funded faster with AI-powered grant writing made easy.
-      </div>
+      </div> */}
 
       <Form {...form}>
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="flex flex-col gap-3 mt-6"
+          className="flex flex-col gap-3 mt-5"
         >
           {/* Name */}
           <FormField

@@ -32,7 +32,9 @@ import Spinner from "./Spinner";
 
 
 const companySchema = z.object({
-  website_url: z.string().url("Must be a valid URL"),
+  website_url: z.string().refine(val => /^((https?:\/\/)?[\w.-]+\.[a-zA-Z]{2,})$/.test(val), {
+    message: "Must be a valid website URL",
+  }),
   company_name: z.string().min(1, "Required"),
   country: z.string().min(1, "Required"),
   company_background: z.string().min(1, "Required"),
