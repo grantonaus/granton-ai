@@ -74,7 +74,8 @@ export async function POST(request: Request) {
       try {
         results.guidelinesText = await extractTextFromWeb(guidelinesLink);
       } catch (err: any) {
-        results.guidelinesError = err.message;
+        // results.guidelinesError = err.message;
+        console.warn(`[guidelinesLink] Skipped due to error: ${err.message}`);
       }
     }
 
@@ -82,7 +83,8 @@ export async function POST(request: Request) {
       try {
         results.applicationFormText = await extractTextFromWeb(applicationFormLink);
       } catch (err: any) {
-        results.applicationFormError = err.message;
+        // results.applicationFormError = err.message;
+        console.warn(`[applicationFormLink] Skipped due to error: ${err.message}`);
       }
     }
 

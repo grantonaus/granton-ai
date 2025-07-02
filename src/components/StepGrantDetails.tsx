@@ -41,14 +41,16 @@ const grantDetailsSchema = z
       .refine((f) => f.type === "application/pdf", "Only PDF allowed")
       .optional(),
     guidelinesLink: z
-      .union([z.string().min(2, "Must be a valid URL"), z.literal("")])
+      // .union([z.string().min(2, "Must be a valid URL"), z.literal("")])
+      .union([z.string().url("Must be a valid URL"), z.literal("")])
       .optional(),
     applicationFormFile: z
       .instanceof(File)
       .refine((f) => f.type === "application/pdf", "Only PDF allowed")
       .optional(),
     applicationFormLink: z
-      .union([z.string().min(2, "Must be a valid URL"), z.literal("")])
+      // .union([z.string().min(2, "Must be a valid URL"), z.literal("")])
+      .union([z.string().url("Must be a valid URL"), z.literal("")])
       .optional(),
   })
   .refine(
