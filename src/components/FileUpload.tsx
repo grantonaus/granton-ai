@@ -195,7 +195,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                     {newFiles.map((file, idx) => (
                         <div key={`new-${idx}`} className="flex items-center justify-between bg-[#191C1C] rounded-md px-4 py-1">
                             <div className="flex items-center space-x-2">
-                                <Paperclip className="size-4 text-[#68FCF2D] mr-2" />
+                                <Paperclip className="size-4 text-[#68FCF2] mr-2" />
                                 <div>
                                     <div className="text-sm font-medium text-[#68FCF2]">{file.name}</div>
                                 </div>

@@ -33,7 +33,7 @@ const chatContinuationSchema = z.object({
  * @param probe     When true, make a network request to be extra-sure.
  * @returns         A *validated, reachable* URL string, or null if hopeless.
  */
-export async function fixAndValidateUrl(
+async function fixAndValidateUrl(
   raw: string | undefined | null,
   probe = false
 ): Promise<string | null> {
