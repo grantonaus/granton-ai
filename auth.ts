@@ -35,6 +35,7 @@ export const {
         session.user.email = token.email || '';
         session.user.isOAuth = token.isOAuth as boolean;
         session.user.profileComplete = token.profileComplete as boolean;
+        session.user.companyComplete = token.companyComplete as boolean;
         session.user.hasPaid = token.hasPaid as boolean;
       }
 
@@ -56,6 +57,7 @@ export const {
       token.lastName = existingUser.lastName;
       token.email = existingUser.email;
       token.profileComplete = existingUser.profileComplete;
+      token.companyComplete = existingUser.companyComplete;
       token.hasPaid = existingUser.hasPaid;
 
 

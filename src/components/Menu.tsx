@@ -22,13 +22,15 @@ import { useCurrentUser } from "@/hooks/user";
 interface MenuProps {
   isOpen: boolean | undefined;
   personalIncomplete?: boolean;
-  isPremium: boolean;  
+  companyIncomplete?: boolean;
+  isPremium: boolean;
 }
 
 export function Menu({
   isOpen,
   personalIncomplete,
-  isPremium,            
+  companyIncomplete,
+  isPremium,
 }: MenuProps) {
   const pathname = usePathname();
   const { session } = useCurrentUser();
@@ -143,14 +145,16 @@ export function Menu({
                                 >
                                   {label}
                                 </p>
-                                {label === "Personal Details" && personalIncomplete && (
-                                  <div
-                                    className={cn(
-                                      "absolute right-5 w-2 h-2 bg-[#89632F] rounded-full",
-                                      isOpen === false ? "hidden" : "block"
-                                    )}
-                                  />
-                                )}
+                                {/* {label === "Personal Details" && personalIncomplete && ( */}
+                                {((label === "Personal Details" && personalIncomplete) ||
+                                  (label === "Company Details" && companyIncomplete)) && (
+                                    <div
+                                      className={cn(
+                                        "absolute right-5 w-2 h-2 bg-[#89632F] rounded-full",
+                                        isOpen === false ? "hidden" : "block"
+                                      )}
+                                    />
+                                  )}
                               </Link>
                             </Button>
                           </TooltipTrigger>
@@ -187,7 +191,7 @@ export function Menu({
           ))}
           <li className="w-full grow flex items-end overflow-visible [&>div>div]:overflow-visible">
 
-          {isPremium ? (
+            {isPremium ? (
               <div
                 className="
                 relative flex flex-col w-full 

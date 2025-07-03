@@ -8,8 +8,9 @@ import { ChevronRight } from "lucide-react";
 export const Banner = ({
 }) => {
   return (
-    <Link
-      href={"personal-details"}
+    // <Link
+    //   href={"personal-details"}
+    <div
       className="
        cursor-pointer
        mt-6
@@ -32,10 +33,11 @@ export const Banner = ({
     >
       <div className="flex w-full space-x-2 items-center justify-center">
 
-        <span className="text-sm font-bold">Add your personal details to start generating content tailored to your needs</span>
-            <ChevronRight className="w-5 h-5 text-[#F8EFC1]" strokeWidth={2} />
+        <span className="text-sm font-bold">Add your personal and company details to start generating content tailored to your needs</span>
+            {/* <ChevronRight className="w-5 h-5 text-[#F8EFC1]" strokeWidth={2} /> */}
       </div>
 
-    </Link>
+    </div>
+    // {/* </Link> */}
   );
 };

@@ -4,6 +4,7 @@ export type ExtendedUser = DefaultSession["user"] & {
     firstName?: string;
     lastName?: string;
     profileComplete?: boolean;
+    companyComplete?: boolean;
     isOAuth: boolean;
     hasPaid?: boolean;
 };

@@ -315,6 +315,7 @@ export async function POST(req: NextRequest) {
         fundingStatus: data.funding_status,
         profileComplete: true,
         attachments: newAttachments as object,
+        companyComplete: true,
       },
     });
 

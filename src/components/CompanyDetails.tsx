@@ -29,6 +29,7 @@ import { Loader } from "./Loader";
 import { useSession } from "next-auth/react";
 import FileUpload from "./FileUpload";
 import Spinner from "./Spinner";
+import { useRouter } from "next/navigation";
 
 
 const companySchema = z.object({
@@ -165,6 +166,8 @@ export default function CompanyDetails({
     fetchCompanyData();
   }, [form]);
 
+  const router = useRouter();
+
 
 
   async function onSubmit(values: CompanyDetailsData) {
@@ -274,8 +277,9 @@ export default function CompanyDetails({
       }
 
       console.log("✅  Company details + attachments saved successfully");
-      toast.success("Company details + attachments saved!");
+      toast.success("Company details saved successfully!");
       setFilesToUpload([]);
+      router.refresh();
       setExistingAttachments(finalAttachments);
     } catch (err) {
       console.error("❌  Form submission error:", err);

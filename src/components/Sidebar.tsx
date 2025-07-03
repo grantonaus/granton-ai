@@ -29,6 +29,7 @@ export async function Sidebar() {
   // }
 
   let profileComplete = session?.user.profileComplete === true;
+  let companyComplete = session?.user.companyComplete === true;
 
   return (
     <aside
@@ -51,6 +52,7 @@ export async function Sidebar() {
 
         <Menu
           isOpen={true}
+          companyIncomplete={!companyComplete}
           personalIncomplete={!profileComplete}
           isPremium={isPremium}
         />

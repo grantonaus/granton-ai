@@ -39,6 +39,7 @@ model User {
   fundingStatus                     String?
   attachments                       Json?
   profileComplete                   Boolean   @default(false)
+  companyComplete                   Boolean   @default(false)
   createdAt                         DateTime  @default(now())
   updatedAt                         DateTime  @updatedAt
   accounts                          Account[]

@@ -4,6 +4,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -58,6 +59,8 @@ export default function PersonalDetails({
         defaultValues: defaultValues ?? blankPersonal,
     });
 
+    const router = useRouter();
+
     const [isSaving, setIsSaving] = useState(false);
 
     const handleSave = async (values: PersonalDetailsData) => {
@@ -79,6 +82,7 @@ export default function PersonalDetails({
     
           toast.success("Personal details saved successfully!");
           setIsSaving(false);
+          router.refresh();
         } catch (err) {
           console.error("Unexpected error", err);
           toast.error("Unexpected error. Please try again.");

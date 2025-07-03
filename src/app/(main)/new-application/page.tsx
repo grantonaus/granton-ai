@@ -18,7 +18,7 @@ import { loadStripe } from "@stripe/stripe-js";
 export default function NewApplicationPage() {
 
   const { session } = useCurrentUser();
-  const { hasPersonalDetails } = usePersonal();
+  const { hasPersonalDetails, hasCompanyDetails } = usePersonal();
 
   const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
@@ -308,7 +308,7 @@ export default function NewApplicationPage() {
 
       <div className="flex flex-col h-full px-5 min-[1340px]:px-0">
 
-        {!hasPersonalDetails && (
+        {(!hasPersonalDetails || !hasCompanyDetails) && (
           <Banner />
         )}
 
@@ -336,6 +336,7 @@ export default function NewApplicationPage() {
               defaultValues={grantDetails}
               onNext={handleGrantNext}
               onBack={prevStep}
+              isProfileComplete={hasPersonalDetails && hasCompanyDetails}
             />
           )}
 

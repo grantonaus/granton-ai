@@ -11,6 +11,8 @@ import {
 interface PersonalContextType {
   hasPersonalDetails: boolean;
   setHasPersonalDetails: (val: boolean) => void;
+  hasCompanyDetails: boolean;
+  setHasCompanyDetails: (val: boolean) => void;
 }
 
 const PersonalContext = createContext<PersonalContextType | undefined>(
@@ -19,21 +21,26 @@ const PersonalContext = createContext<PersonalContextType | undefined>(
 
 interface PersonalProviderProps {
   initialHasPersonalDetails: boolean;
+  initialHasCompanyDetails: boolean;
   children: ReactNode;
 }
 
 export function PersonalProvider({
   initialHasPersonalDetails,
+  initialHasCompanyDetails,
   children,
 }: PersonalProviderProps) {
   // Initialize from the prop instead of always `false`
   const [hasPersonalDetails, setHasPersonalDetails] = useState(
     initialHasPersonalDetails
   );
+  const [hasCompanyDetails, setHasCompanyDetails] = useState(
+    initialHasCompanyDetails
+  );
 
   return (
     <PersonalContext.Provider
-      value={{ hasPersonalDetails, setHasPersonalDetails }}
+      value={{ hasPersonalDetails, setHasPersonalDetails, hasCompanyDetails, setHasCompanyDetails }}
     >
       {children}
     </PersonalContext.Provider>

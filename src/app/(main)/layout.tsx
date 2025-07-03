@@ -15,17 +15,19 @@ export default async function ExploreLayout({ children }: ExploreLayoutProps) {
   const userId = session?.user?.id ?? null;
 
   let profileComplete = false;
+  let companyComplete = false;
   if (userId) {
     const existingUser = await client.user.findUnique({
       where: { id: userId },
-      select: { profileComplete: true },
+      select: { profileComplete: true, companyComplete: true },
     });
     profileComplete = existingUser?.profileComplete === true;
+    companyComplete = existingUser?.companyComplete === true;
   }
 
   // 2) Wrap in PersonalProvider with the server‐computed flag
   return (
-    <PersonalProvider initialHasPersonalDetails={profileComplete}>
+    <PersonalProvider initialHasPersonalDetails={profileComplete} initialHasCompanyDetails={companyComplete}>
       <Sidebar/>
       <main
         className={cn(

@@ -86,12 +86,14 @@ interface StepGrantDetailsProps {
   defaultValues?: Partial<GrantDetailsData>
   onNext: (values: GrantDetailsData) => void
   onBack: () => void
+  isProfileComplete: boolean
 }
 
 export default function StepGrantDetails({
   defaultValues,
   onNext,
   onBack,
+  isProfileComplete,
 }: StepGrantDetailsProps) {
   const [isLoading, setIsLoading] = useState(false)
 
@@ -278,7 +280,7 @@ export default function StepGrantDetails({
             type="submit"          
             className="flex-1 h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer"
             onClick={form.handleSubmit(handleSubmit)}
-            disabled={isLoading}
+            disabled={isLoading || !isProfileComplete∆}
           >
             <Loader loading={isLoading}>Continue</Loader>
           </Button>
