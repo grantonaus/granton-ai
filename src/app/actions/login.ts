@@ -34,7 +34,7 @@ export const login = async (
     const result = await signIn("credentials", {
       email,
       password,
-      redirectTo: callbackUrl || "/new-application",
+      // redirectTo: callbackUrl || "/new-application",
     });
 
     console.log("SignIn Result:", result); // Log the result from signIn

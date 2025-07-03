@@ -74,7 +74,7 @@ const SignUpPage = () => {
 
         const res = await login(values, callbackUrl);
 
-        router.push("/new-application")
+        router.push("/company-details")
 
         if (res?.error) {
           setError("Registration successful, but failed to log in");
