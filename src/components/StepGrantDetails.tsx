@@ -19,7 +19,7 @@ import { FileUploader, FileInput, FileUploaderContent, FileUploaderItem } from "
 
 import FileUpload from "./FileUpload"
 import { Loader } from "./Loader"
-import { URL } from "url"
+
 
 
 const grantDetailsSchema = z
@@ -280,7 +280,7 @@ export default function StepGrantDetails({
             type="submit"          
             className="flex-1 h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer"
             onClick={form.handleSubmit(handleSubmit)}
-            disabled={isLoading || !isProfileComplete∆}
+            disabled={isLoading || !isProfileComplete}
           >
             <Loader loading={isLoading}>Continue</Loader>
           </Button>

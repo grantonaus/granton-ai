@@ -3,7 +3,7 @@
 import { FC } from "react";
 
 const defaultSteps = [
-  "Company Details",
+  // "Company Details",
   "Grant Details",
   "Budget",
   "Additional Questions",
