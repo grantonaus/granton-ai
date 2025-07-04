@@ -224,19 +224,19 @@ export default function NewApplicationPage() {
 
   async function handleGenerateApplication(messages: Message[]) {
 
-    if (!session?.user?.hasPaid) {
-      const stripe = await stripePromise;
-      const res = await fetch("/api/stripe/create-session", { method: "POST" });
-      if (!res.ok) {
-        console.error("Stripe session creation failed:", await res.text());
-        return;
-      }
-      const { url } = await res.json();
-      if (stripe && url) {
-        window.location.href = url;
-      }
-      return; // do not proceed to generation
-    }
+    // if (!session?.user?.hasPaid) {
+    //   const stripe = await stripePromise;
+    //   const res = await fetch("/api/stripe/create-session", { method: "POST" });
+    //   if (!res.ok) {
+    //     console.error("Stripe session creation failed:", await res.text());
+    //     return;
+    //   }
+    //   const { url } = await res.json();
+    //   if (stripe && url) {
+    //     window.location.href = url;
+    //   }
+    //   return; // do not proceed to generation
+    // }
 
     setChatHistory(messages);
 
@@ -315,7 +315,7 @@ export default function NewApplicationPage() {
         <StepTracker currentStep={currentStep} onStepClick={setCurrentStep} />
 
         <div className="flex-1 overflow-hidden">
-          {currentStep === 1 && (
+          {/* {currentStep === 1 && (
             <>
               {isLoadingCompany ? (
                 <div className="h-[75vh] flex-1 flex items-center justify-center text-gray-400">
@@ -328,10 +328,10 @@ export default function NewApplicationPage() {
                 />
               )}
             </>
-          )}
+          )} */}
 
 
-          {currentStep === 2 && (
+          {currentStep === 1 && (
             <StepGrantDetails
               defaultValues={grantDetails}
               onNext={handleGrantNext}
@@ -340,7 +340,7 @@ export default function NewApplicationPage() {
             />
           )}
 
-          {currentStep === 3 && (
+          {currentStep === 2 && (
             <BudgetDetailsDetails
               defaultValues={budgetDetails}
               onNext={handleBudgetNext}
@@ -350,7 +350,7 @@ export default function NewApplicationPage() {
             />
           )}
 
-          {currentStep === 4 &&
+          {currentStep === 3 &&
             <AdditionalQuestions
               onBack={prevStep}
               onNext={handleGenerateApplication}
@@ -363,7 +363,7 @@ export default function NewApplicationPage() {
             />
           }
 
-          {currentStep === 5 && 
+          {currentStep === 4 && 
             <Finalise 
               applicationText={generatedApplication} 
               applicationTitle={applicationTitle} 

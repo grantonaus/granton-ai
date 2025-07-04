@@ -278,7 +278,8 @@ export default function StepGrantDetails({
           </Button>
           <Button
             type="submit"          
-            className="flex-1 h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer"
+            className="flex-1 h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer  disabled:bg-[#282828] disabled:text-[#626262] 
+             disabled:cursor-default"
             onClick={form.handleSubmit(handleSubmit)}
             disabled={isLoading || !isProfileComplete}
           >

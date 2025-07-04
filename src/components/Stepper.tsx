@@ -3,7 +3,7 @@
 import { FC } from "react";
 
 const defaultSteps = [
-  "Company Details",
+  // "Company Details",
   "Grant Details",
   "Budget",
   "Additional Questions",
@@ -71,7 +71,7 @@ export const StepTracker: FC<StepTrackerProps> = ({
                   className={`
       h-[2px] rounded 
       ${step < currentStep ? "bg-[#68FCF2]" : "bg-[#202020]"} 
-      mx-4 w-4 lg:w-7
+      mx-4 w-4 lg:w-24
     `}
                 />
               )}

@@ -313,7 +313,6 @@ export async function POST(req: NextRequest) {
         mainObjective: data.main_objective,
         targetCustomers: data.target_customers,
         fundingStatus: data.funding_status,
-        profileComplete: true,
         attachments: newAttachments as object,
         companyComplete: true,
       },
