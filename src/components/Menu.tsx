@@ -235,7 +235,7 @@ export function Menu({
                   // onClick={handleUpgrade}
                   // disabled={loading}
                   onClick={handleClick}
-                  className="w-full bg-black text-white font-bold h-11 rounded-lg">
+                  className="w-full bg-black hover:bg-black/80 text-white font-bold h-11 rounded-lg cursor-pointer">
                   Upgrade
                 </Button>
                 {/* </a> */}

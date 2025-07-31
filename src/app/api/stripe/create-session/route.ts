@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     payment_method_types: ['card'],
-    line_items: [{ price: 'price_1RWOdQIwBfdKqFYHK268dJeX', quantity: 1 }], // your price ID
+    line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }], // your price ID
     success_url: 'http://localhost:3000/new-application',
     cancel_url: 'http://localhost:3000/new-application',
     metadata: {

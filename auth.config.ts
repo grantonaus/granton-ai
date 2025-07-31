@@ -10,6 +10,7 @@ import { z } from "zod";
 
 
 export default {
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
