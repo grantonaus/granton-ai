@@ -22,9 +22,11 @@ datasource db {
 model User {
   id                                String    @id @default(cuid())
   email                             String    @unique
-  password                          String
-  firstName                         String
+  password                          String?
+  name                              String?
+  firstName                         String?
   lastName                          String?
+  emailVerified                     DateTime?
   image                             String?
   hasPaid                           Boolean   @default(false)
   paidAt                            DateTime?

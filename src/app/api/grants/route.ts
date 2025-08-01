@@ -13,6 +13,7 @@ export async function GET() {
   });
 
   if (!dbUser || !dbUser.hasPaid) {
+    // return NextResponse.json({ error: "Not subscribed" }, { status: 403 });
     return NextResponse.json({ error: "Not subscribed" }, { status: 403 });
   }
 

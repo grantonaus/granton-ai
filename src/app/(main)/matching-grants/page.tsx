@@ -20,13 +20,36 @@ const MatchingGrantsPage = () => {
   const [grants, setGrants] = useState<GrantSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // useEffect(() => {
+  //   async function fetchGrants() {
+  //     try {
+  //       const response = await fetch("/api/grants");
+  //       const json = await response.json();
+  //       if (response.ok && Array.isArray(json)) {
+  //         setGrants(json);
+  //       } else {
+  //         console.error("Failed to fetch grants:", json.error || json);
+  //       }
+  //     } catch (err) {
+  //       console.error("Error fetching grants:", err);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   }
+  //   fetchGrants();
+  // }, []);
+
+  const [subscribed, setSubscribed] = useState(true); // assume true initially
+
   useEffect(() => {
     async function fetchGrants() {
       try {
         const response = await fetch("/api/grants");
         const json = await response.json();
-        if (response.ok && Array.isArray(json)) {
-          setGrants(json);
+
+        if (response.ok) {
+          setSubscribed(json.subscribed ?? true);
+          setGrants(json.grants ?? []);
         } else {
           console.error("Failed to fetch grants:", json.error || json);
         }
@@ -36,8 +59,10 @@ const MatchingGrantsPage = () => {
         setLoading(false);
       }
     }
+
     fetchGrants();
   }, []);
+
 
   return (
     <ContentLayout title="Matching Grants">
@@ -64,14 +89,30 @@ const MatchingGrantsPage = () => {
             <div className="flex-grow flex items-center justify-center">
               <Spinner />
             </div>
+            // ) : grants.length === 0 ? (
+            //   <div className="flex-grow flex flex-col items-center justify-center space-y-2">
+            //     <p className="text-muted-foreground text-base">
+            //       {grants.length === 0
+            //         ? "No matching grants found for your company."
+            //         : "No grants match your search."}
+            //     </p>
+            //   </div>
+            // ) : (
+            // <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 md:gap-5">
+            //   {grants.map((grant) => (
+            //     <GrantCard key={grant.id} grant={grant} />
+            //   ))}
+            // </div>
+            // )}
+
+          ) : subscribed === false ? (
+            <p className="text-muted-foreground text-base">
+              You need a subscription to view matching grants.
+            </p>
           ) : grants.length === 0 ? (
-            <div className="flex-grow flex flex-col items-center justify-center space-y-2">
-              <p className="text-muted-foreground text-base">
-                {grants.length === 0
-                  ? "No matching grants found for your company."
-                  : "No grants match your search."}
-              </p>
-            </div>
+            <p className="text-muted-foreground text-base">
+              No matching grants found for your company.
+            </p>
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 md:gap-5">
               {grants.map((grant) => (

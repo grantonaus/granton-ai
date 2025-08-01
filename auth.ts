@@ -16,12 +16,32 @@ export const {
     signIn: "/sign-in",
   },
   callbacks: {
+    // async signIn({ user, account }) {
+    //   if (account?.provider !== "credentials") return true;
+
+    //   const existingUser = await getUserById(user.id as string);
+
+
+    //   return true;
+    // },
     async signIn({ user, account }) {
-      if (account?.provider !== "credentials") return true;
-
-      const existingUser = await getUserById(user.id as string);
-
-
+      if (account?.provider === "credentials") return true;
+    
+      // Handle Google OAuth login
+      if (account?.provider === "google" && user.name) {
+        const [firstName, ...rest] = user.name.trim().split(" ");
+        const lastName = rest.join(" ");
+    
+        // Optional: Only update if these fields are still null
+        await client.user.update({
+          where: { id: user.id },
+          data: {
+            firstName,
+            lastName,
+          },
+        });
+      }
+    
       return true;
     },
     async session({ token, session }) {
@@ -41,26 +61,58 @@ export const {
 
       return session;
     },
-    async jwt({ token }) {
-      if (!token.sub) return token;
+    // async jwt({ token }) {
+    //   if (!token.sub) return token;
 
-      const existingUser = await getUserById(token.sub);
+    //   const existingUser = await getUserById(token.sub);
 
-      if (!existingUser) return token;
+    //   if (!existingUser) return token;
 
-      const existingAccount = await getAccountByUserId(
-        existingUser.id
-      );
+    //   const existingAccount = await getAccountByUserId(
+    //     existingUser.id
+    //   );
 
-      token.isOAuth = !!existingAccount;
-      token.firstName = existingUser.firstName;
-      token.lastName = existingUser.lastName;
-      token.email = existingUser.email;
-      token.profileComplete = existingUser.profileComplete;
-      token.companyComplete = existingUser.companyComplete;
-      token.hasPaid = existingUser.hasPaid;
+    //   token.isOAuth = !!existingAccount;
+    //   token.firstName = existingUser.firstName;
+    //   token.lastName = existingUser.lastName;
+    //   token.email = existingUser.email;
+    //   token.profileComplete = existingUser.profileComplete;
+    //   token.companyComplete = existingUser.companyComplete;
+    //   token.hasPaid = existingUser.hasPaid;
 
 
+    //   return token;
+    // }
+
+    async jwt({ token, user }) {
+      if (!token.sub && !user) return token;
+    
+      // Extract first and last name from Google OAuth user on first sign-in
+      if (user && user.name && !token.firstName && !token.lastName) {
+        const name = user.name.trim();
+        const [firstName, ...rest] = name.split(" ");
+        const lastName = rest.join(" ");
+    
+        token.firstName = firstName;
+        token.lastName = lastName;
+        token.email = user.email || "";
+      }
+    
+      if (token.sub) {
+        const existingUser = await getUserById(token.sub);
+        if (!existingUser) return token;
+    
+        const existingAccount = await getAccountByUserId(existingUser.id);
+    
+        token.isOAuth = !!existingAccount;
+        token.firstName = existingUser.firstName;
+        token.lastName = existingUser.lastName;
+        token.email = existingUser.email;
+        token.profileComplete = existingUser.profileComplete;
+        token.companyComplete = existingUser.companyComplete;
+        token.hasPaid = existingUser.hasPaid;
+      }
+    
       return token;
     }
   },
