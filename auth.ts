@@ -27,19 +27,19 @@ export const {
     async signIn({ user, account }) {
       if (account?.provider === "credentials") return true;
     
-      // Handle Google OAuth login
-      if (account?.provider === "google" && user.name) {
+      if (account?.provider === "google" && user.name && user.id) {
         const [firstName, ...rest] = user.name.trim().split(" ");
         const lastName = rest.join(" ");
     
-        // Optional: Only update if these fields are still null
-        await client.user.update({
-          where: { id: user.id },
-          data: {
-            firstName,
-            lastName,
-          },
-        });
+        try {
+          await client.user.update({
+            where: { id: user.id },
+            data: { firstName, lastName },
+          });
+        } catch (err) {
+          console.warn("Failed to update user", err);
+          // Don't block login
+        }
       }
     
       return true;
