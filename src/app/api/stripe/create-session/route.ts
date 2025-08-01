@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
     mode: 'payment',
     payment_method_types: ['card'],
     line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }], // your price ID
-    success_url: 'http://localhost:3000/new-application',
-    cancel_url: 'http://localhost:3000/new-application',
+    success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/new-application`,
+    cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/new-application`,
     metadata: {
         userId: userSession.user.id, // 👈 attaches your Prisma user ID
     },
