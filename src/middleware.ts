@@ -84,19 +84,20 @@
 //   matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
 // };
 
-// middleware.ts
 
+// middleware.ts
 import { auth } from "../auth";
 import { NextResponse } from "next/server";
 
-// Define ALL known valid routes
-const knownRoutes = [
-  "^/login$",
-  "^/sign-up$",
-  "^/auth/error$",
-  "^/forgot-password$",
-  "^/new-password$",
-  "^/reset-password$",
+const publicRoutes = [
+  "/login",
+  "/sign-up",
+  "/forgot-password",
+  "/reset-password",
+  "/new-password"
+];
+
+const protectedRoutes = [
   "/new-application",
   "/past-applications",
   "/company-details",
@@ -108,32 +109,28 @@ export default auth((req) => {
   const pathname = req.nextUrl.pathname;
   const isLoggedIn = !!req.auth;
 
-  const isKnownRoute = knownRoutes.includes(pathname);
+  const isPublic = publicRoutes.includes(pathname);
+  const isProtected = protectedRoutes.includes(pathname);
 
-  // 🚫 If the route doesn't match any known page, redirect
-  if (!isKnownRoute) {
+  // 🔁 If visiting login (or any public page), allow access
+  if (isPublic) return NextResponse.next();
+
+  // 🔒 If trying to access a protected route without login → redirect to /login
+  if (isProtected && !isLoggedIn) {
+    const url = new URL("/login", req.url);
+    url.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // 🚧 Optional: If the route doesn't match any known route, redirect
+  const knownRoutes = [...publicRoutes, ...protectedRoutes];
+  if (!knownRoutes.includes(pathname)) {
     return NextResponse.redirect(new URL("/new-application", req.url));
   }
 
-  // 🔐 Optionally, protect some routes
-  const protectedRoutes = [
-    "/new-application",
-    "/past-applications",
-    "/company-details",
-    "/personal-details",
-    "/matching-grants"
-  ];
-
-  const isProtectedRoute = protectedRoutes.includes(pathname);
-
-  if (isProtectedRoute && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/login", req.url));
-  }
-
-  // ✅ Let known routes through
   return NextResponse.next();
 });
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
