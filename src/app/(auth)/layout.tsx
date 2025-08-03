@@ -23,7 +23,7 @@ const AuthLayout = async ({ children }: AuthLayoutProps) => {
           <div className="w-full max-w-lg">
             <Image
               className="text-xl font-bold absolute left-5 top-5 md:left-8 md:top-8"
-              src="/logo.png"
+              src="/1.png"
               alt='logo'
               width={114}
               height={53}
