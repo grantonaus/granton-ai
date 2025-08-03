@@ -25,8 +25,8 @@ const AuthLayout = async ({ children }: AuthLayoutProps) => {
               className="text-xl font-bold absolute left-5 top-5 md:left-8 md:top-8"
               src="/1.png"
               alt='logo'
-              width={114}
-              height={53}
+              width={130} 
+              height={64}
             />
             {children}
           </div>

@@ -46,7 +46,7 @@ export async function Sidebar() {
           asChild
         >
           <Link href="/new-application" className="flex items-center gap-2">
-            <Image src="/1.png" alt="logo" width={114} height={53} />
+            <Image src="/1.png" alt="logo" width={130} height={64} />
           </Link>
         </Button>
 
