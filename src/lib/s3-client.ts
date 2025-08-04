@@ -1,8 +1,8 @@
 // app/lib/s3-client.ts
 import { S3Client } from "@aws-sdk/client-s3";
 
-const REGION = process.env.AWS_REGION!;
-const BUCKET = process.env.S3_BUCKET_NAME!;
+const REGION = process.env.NEXT_PUBLIC_AWS_REGION!;
+const BUCKET = process.env.NEXT_PUBLIC_S3_BUCKET_NAME!;
 const ACCESS_KEY = process.env.AWS_ACCESS_KEY_ID!;
 const SECRET_KEY = process.env.AWS_SECRET_ACCESS_KEY!;
 

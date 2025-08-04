@@ -90,9 +90,12 @@ export default function NewApplicationPage() {
           continue;
         }
 
-        const objectUrl = `https://company-attachments-bucket.s3.eu-north-1.amazonaws.com/${encodeURIComponent(
-          key
-        )}`;
+        // const objectUrl = `https://company-attachments-bucket.s3.eu-north-1.amazonaws.com/${encodeURIComponent(
+        //   key
+        // )}`;
+
+        const objectUrl = `https://${process.env.NEXT_PUBLIC_S3_BUCKET_NAME}.s3.${process.env.NEXT_PUBLIC_AWS_REGION}.amazonaws.com/${encodeURIComponent(key)}`;
+
 
         uploadedAttachments.push({ name: file.name, url: objectUrl, key });
       } catch (err) {
