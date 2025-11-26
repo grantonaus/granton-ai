@@ -23,7 +23,7 @@ export const login = async (
   // const existingUser = await getUserByEmail(email);
   const existingUser = await client.user.findUnique({ where: { email } });
 
-  console.log("Fetched user:", existingUser);
+  // console.log("Fetched user:", existingUser);
 
   if (!existingUser || !existingUser.email || !existingUser.password) {
     console.error("Invalid credentials:", email); // Log if user is not found

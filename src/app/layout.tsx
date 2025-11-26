@@ -83,21 +83,7 @@ export default async function RootLayout({
         <head>
           <meta charSet="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <meta name="author" content="Artyom Antonenko" />
-          <meta name="robots" content="index, follow" />
-          <meta property="og:title" content="GStudy - Smarter Learning Platform" />
-          <meta property="og:description" content="Boost your productivity with AI-generated notes, flashcards, and summaries tailored for effective studying." />
-          <meta property="og:image" content="/og-image.png" />
-          <meta name="twitter:card" content="summary_large_image" />
-          <meta name="twitter:title" content="GStudy - Smarter Learning Platform" />
-          <meta name="twitter:description" content="Boost your productivity with AI-generated notes, flashcards, and summaries tailored for effective studying." />
-          <meta name="twitter:image" content="/og-image.png" />
-          <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-          <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-          <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-          <link rel="manifest" href="/site.webmanifest" />
-          <meta name="msapplication-TileColor" content="#da532c" />
-          <meta name="theme-color" content="#ffffff" />
+         
         </head>
         <body className="h-full antialiased" suppressHydrationWarning>
           <Toaster position="bottom-center" richColors />

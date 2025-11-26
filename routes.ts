@@ -3,6 +3,7 @@
    * These routes will redirect logged-in users to /settings
    */
   export const authRoutes: string[] = [
+    "^/login",
     "^/login$",
     "^/sign-up$",
     "^/auth/erroxr$",
