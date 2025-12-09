@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import PlanCard from "./plan-card";
+import SwitchToggle from "./switch-toggle";
 
 
-export default function PricingSection({ isAnnual }: { isAnnual: boolean }) {
+export default function PricingSection({ isAnnual: initialIsAnnual = false }: { isAnnual?: boolean }) {
+  const [isAnnual, setIsAnnual] = useState(initialIsAnnual);
   const plans = [
     {
       title: "Starter",
@@ -25,11 +28,11 @@ export default function PricingSection({ isAnnual }: { isAnnual: boolean }) {
       title: "Pro",
       description: "Unlock intelligent grant matching",
       monthlyPrice: 29,
-      annualPrice: 348, // 29 * 12
+      annualPrice: 300, // 25 * 12
       features: [
         "Everything in Starter",
         "Unlimited grant matching",
-        "Advanced AI filtering",
+        "AI application generator",
         "Location-based matching",
         "Priority email support",
       ],
@@ -76,6 +79,23 @@ export default function PricingSection({ isAnnual }: { isAnnual: boolean }) {
         Start for free with database access, then upgrade to unlock AI-powered grant matching.
       </p>
 
+      {/* Annual/Monthly Toggle */}
+      <div className="mx-auto mt-8 flex items-center justify-center gap-3">
+        <span className={`text-sm font-medium ${!isAnnual ? 'text-white' : 'text-gray-400'}`}>
+          Monthly
+        </span>
+        <SwitchToggle
+          isAnnual={isAnnual}
+          setIsAnnual={setIsAnnual}
+        />
+        <span className={`text-sm font-medium ${isAnnual ? 'text-white' : 'text-gray-400'}`}>
+          Annual
+        </span>
+        <span className={`text-xs text-[#68FCF2] font-medium ${isAnnual ? 'opacity-100' : 'opacity-0'}`}>
+          Save 20%
+        </span>
+      </div>
+
       {/* Pricing grid */}
       {/* <div className="mx-auto mt-16 grid max-w-lg grid-cols-1 gap-y-10 sm:mt-20 lg:max-w-4xl lg:grid-cols-2 sm:gap-y-0">
 
@@ -97,8 +117,8 @@ export default function PricingSection({ isAnnual }: { isAnnual: boolean }) {
       </div> */}
 
 
-<div className="mx-auto mt-16 grid max-w-lg grid-cols-1 gap-y-10 sm:mt-20 lg:max-w-5xl lg:grid-cols-2">
-        
+      <div className="mx-auto mt-16 grid max-w-lg grid-cols-1 gap-y-10 sm:mt-20 lg:max-w-5xl lg:grid-cols-2">
+
         {/* FREE PLAN */}
         <div className="">
           <PlanCard
@@ -106,14 +126,14 @@ export default function PricingSection({ isAnnual }: { isAnnual: boolean }) {
             description="Explore the grant database"
             monthlyPrice={0}
             annualPrice={0}
-            href="/dashboard"
+            href="/grant-database"
             features={[
               "Access to grant database",
               "Basic search and filtering",
               "Browse all available grants",
               "No AI matching",
             ]}
-            isAnnual={false}
+            isAnnual={isAnnual}
             shape="free-left"
           />
         </div>
@@ -124,23 +144,34 @@ export default function PricingSection({ isAnnual }: { isAnnual: boolean }) {
             title="Pro"
             description="Unlock intelligent grant matching"
             monthlyPrice={29}
-            annualPrice={348}
+            annualPrice={300}
             paymentLink="/api/stripe/checkout"
-            href="/dashboard"
+            href="/matching-grants"
             features={[
               "Everything in Starter",
               "Unlimited grant matching",
-              "Advanced AI filtering",
-              "Smart notifications",
+              "AI application generator",
               "Location-based matching",
               "Priority email support",
             ]}
-            isAnnual={false}
+            isAnnual={isAnnual}
             highlight
             shape="pro-right"
           />
         </div>
       </div>
+
+
+      <motion.div
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mt-12 mb-8 w-auto items-center justify-center space-x-2 overflow-hidden transition-all"
+      >
+        <p className="text-md font-medium text-muted-foreground">
+          Need a custom solution? <a href="mailto:info@granton.io" className="text-[#24bbb1] hover:underline">Contact our sales team</a>
+        </p>
+      </motion.div>
     </section>
   );
 }

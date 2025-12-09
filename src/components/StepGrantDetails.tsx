@@ -109,6 +109,7 @@ export default function StepGrantDetails({
   const form = useForm<GrantDetailsData>({
     resolver: zodResolver(grantDetailsSchema),
     defaultValues: defaultValues ?? blankGrant,
+    mode: "onChange",
   })
 
   useEffect(() => {
@@ -142,7 +143,7 @@ export default function StepGrantDetails({
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-y-auto pt-2">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 max-w-[960px] mx-auto">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 max-w-[1200px] mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <FormField
@@ -195,6 +196,8 @@ export default function StepGrantDetails({
                           setGuidelinesFile(file);
                           form.setValue("guidelinesFile", file);
                         }
+                        form.trigger("guidelinesFile");
+                        form.trigger("guidelinesLink");
                       }}
                     />
                   </FormControl>
@@ -211,7 +214,15 @@ export default function StepGrantDetails({
                 <FormItem>
                   <FormLabel>Grant Guidelines Form Document (if attachment not available)</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://www.grant-guidelines.com" {...field} />
+                    <Input 
+                      placeholder="https://www.grant-guidelines.com" 
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        form.trigger("guidelinesFile");
+                        form.trigger("guidelinesLink");
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -237,6 +248,8 @@ export default function StepGrantDetails({
                           setApplicationFormFile(file);
                           form.setValue("applicationFormFile", file);
                         }
+                        form.trigger("applicationFormFile");
+                        form.trigger("applicationFormLink");
                       }}
                     />
                   </FormControl>
@@ -255,7 +268,15 @@ export default function StepGrantDetails({
                 <FormItem>
                   <FormLabel>Grant Application Form Document (if attachment not available)</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://apply-here.com" {...field} />
+                    <Input 
+                      placeholder="https://apply-here.com" 
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        form.trigger("applicationFormFile");
+                        form.trigger("applicationFormLink");
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -267,7 +288,7 @@ export default function StepGrantDetails({
       </div>
 
       <div className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8">
-        <div className="max-w-[960px] mx-auto flex justify-between gap-4">
+        <div className="max-w-[1200px] mx-auto flex justify-between gap-4">
           <Button
             variant="outline"
             className="flex-1 h-10 font-black text-white bg-[#0E0E0E] hover:bg-[#101010] border border-[#1C1C1C] hover:text-white cursor-pointer"
@@ -281,7 +302,7 @@ export default function StepGrantDetails({
             className="flex-1 h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer  disabled:bg-[#282828] disabled:text-[#626262] 
              disabled:cursor-default"
             onClick={form.handleSubmit(handleSubmit)}
-            disabled={isLoading || !isProfileComplete}
+            disabled={isLoading || !isProfileComplete || !form.formState.isValid}
           >
             <Loader loading={isLoading}>Continue</Loader>
           </Button>

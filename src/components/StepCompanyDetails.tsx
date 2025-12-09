@@ -47,6 +47,7 @@ const companySchema = z.object({
   }),
   company_name: z.string().min(1, "Required"),
   country: z.string().min(1, "Required"),
+  state: z.string().optional(),
   company_background: z.string().min(1, "Required"),
   product: z.string().min(1, "Required"),
   competitors_unique_value_proposition: z.string().min(1, "Required"),
@@ -66,6 +67,7 @@ const blankCompany: CompanyDetailsData = {
   website_url: "",
   company_name: "",
   country: "",
+  state: "",
   company_background: "",
   product: "",
   competitors_unique_value_proposition: "",
@@ -126,66 +128,91 @@ export default function StepCompanyDetails({
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-y-auto pt-2">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-w-[960px] mx-auto">
-            {/* Grant Link & Amount */}
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-3">
-              <div className="col-span-1 xl:col-span-4">
-                <FormField
-                  control={form.control}
-                  name="website_url"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Website URL</FormLabel>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-w-[1200px] mx-auto">
+            {/* Company Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="website_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Website URL</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="https://www.yourcompany.com"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="company_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="FutureTech Pty Ltd"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="country"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Country</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Australia"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value ?? ""}
+                    >
                       <FormControl>
-                        <Input
-                          placeholder="https://www.yourcompany.com"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-1 xl:col-span-4">
-                <FormField
-                  control={form.control}
-                  name="company_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Company Name</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="FutureTech Pty Ltd"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-1 xl:col-span-4">
-                <FormField
-                  control={form.control}
-                  name="country"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Country</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Australia"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                      <SelectContent>
+                        <SelectItem value="NSW">NSW - New South Wales</SelectItem>
+                        <SelectItem value="VIC">VIC - Victoria</SelectItem>
+                        <SelectItem value="QLD">QLD - Queensland</SelectItem>
+                        <SelectItem value="WA">WA - Western Australia</SelectItem>
+                        <SelectItem value="SA">SA - South Australia</SelectItem>
+                        <SelectItem value="TAS">TAS - Tasmania</SelectItem>
+                        <SelectItem value="ACT">ACT - Australian Capital Territory</SelectItem>
+                        <SelectItem value="NT">NT - Northern Territory</SelectItem>
+                        <SelectItem value="National">National</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <FormField
@@ -384,7 +411,7 @@ export default function StepCompanyDetails({
       </div>
 
       <div className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8">
-        <div className="max-w-[960px] mx-auto flex justify-between gap-4">
+        <div className="max-w-[1200px] mx-auto flex justify-between gap-4">
           <Button
             disabled={isSaving}
             onClick={form.handleSubmit(onSubmit)}

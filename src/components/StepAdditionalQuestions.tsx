@@ -238,33 +238,39 @@ export default function AdditionalQuestions({
 
 
 
-  // calculate chat height
+  // calculate chat height: full page - header - footer - gaps
   useEffect(() => {
     function calculateHeight() {
-
-      const navbarElem = document.getElementById("navbar");
-      const footerElem = document.getElementById("footer");
-
-      const navbarHeight = navbarElem
-        ? navbarElem.getBoundingClientRect().height
-        : 0;
+      const footerElem = footerRef.current;
       const footerHeight = footerElem
         ? footerElem.getBoundingClientRect().height
         : 0;
 
-      const extraPaddingTop = 16;
-      const extraPaddingBottom = 16;
+      // Find the sticky header in the parent
+      const stickyHeader = document.querySelector('[class*="sticky"][class*="top-0"]');
+      const headerHeight = stickyHeader
+        ? stickyHeader.getBoundingClientRect().height
+        : 0;
+
+      const topMargin = 24; // mt-6 on chat container = 24px
+      const chatHeaderHeight = 56; // Chat header height
+      const inputHeight = 72; // Input area height
+      const gap = 8; // mb-2 on header = 8px gap
 
       const newAvailableHeight =
         window.innerHeight -
-        navbarHeight -
+        headerHeight -
         footerHeight -
-        extraPaddingTop -
-        extraPaddingBottom;
+        chatHeaderHeight -
+        inputHeight -
+        topMargin -
+        gap;
 
-      setAvailableHeight(newAvailableHeight);
+      setAvailableHeight(Math.max(300, newAvailableHeight));
     }
 
+    // Calculate after a small delay to ensure DOM is ready
+    setTimeout(calculateHeight, 0);
     calculateHeight();
 
     window.addEventListener("resize", calculateHeight);
@@ -355,7 +361,15 @@ export default function AdditionalQuestions({
     }
   };
 
-  if (isLoading) return <div className="w-full h-full flex items-center justify-center"><Spinner /></div>;
+  if (isLoading) return (
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex-1 flex items-center justify-center min-h-[calc(100vh-200px)]">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <Spinner />
+        </div>
+      </div>
+    </div>
+  );
   // if (loadError) return <div className="flex-1 flex flex-col items-center justify-center p-4"><p className="text-red-500">Error: {loadError}</p><Button onClick={onBack}>Back</Button></div>;
 
 
@@ -365,10 +379,10 @@ export default function AdditionalQuestions({
   return (
     <div className="flex flex-col h-full overflow-hidden">
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         <div
           ref={chatContainerRef}
-          className="flex flex-col mx-auto w-full max-w-[960px] rounded-md border border-border bg-[#0E0E0E] overflow-hidden"
+          className="flex flex-col w-full rounded-md border border-border bg-[#0E0E0E] overflow-hidden mt-6"
           style={{ height: availableHeight }}
         >
           {/* Header (fixed height) */}
@@ -442,8 +456,8 @@ export default function AdditionalQuestions({
           </div>
         </div>
       </div>
-      <div ref={footerRef} className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8">
-        <div className="max-w-[960px] mx-auto flex justify-between gap-4">
+      <div ref={footerRef} className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8 flex-shrink-0">
+        <div className="flex justify-between gap-4">
           <Button
             variant="outline"
             className="flex-1 h-10 font-black text-white bg-[#0E0E0E] hover:bg-[#101010] border border-[#1C1C1C] hover:text-white"
@@ -460,12 +474,7 @@ export default function AdditionalQuestions({
               setIsGenerating(false);
             }}
             disabled={!canFinalize}
-            className={`
-              flex-1 h-10 font-black text-black 
-              ${canFinalize
-                ? "bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer"
-                : "bg-[#3a3a3a] cursor-not-allowed opacity-60"}
-            `}
+            className="flex-1 h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer disabled:bg-[#282828] disabled:text-[#626262] disabled:cursor-default"
           >
             <Loader loading={isGenerating}>Finalise</Loader>
           </Button>

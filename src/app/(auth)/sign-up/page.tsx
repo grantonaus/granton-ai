@@ -74,12 +74,40 @@ const SignUpPage = () => {
 
         const res = await login(values, callbackUrl);
 
-        router.push("/company-details")
-
         if (res?.error) {
           setError("Registration successful, but failed to log in");
         } else {
-          console.error("Login Error:", res!.error);
+          // Check for pending payment
+          const pendingPaymentLink = sessionStorage.getItem("pendingPaymentLink");
+          const pendingIsAnnual = sessionStorage.getItem("pendingIsAnnual");
+          
+          if (pendingPaymentLink) {
+            sessionStorage.removeItem("pendingPaymentLink");
+            sessionStorage.removeItem("pendingIsAnnual");
+            
+            // Redirect to checkout
+            try {
+              const response = await fetch(pendingPaymentLink, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ isAnnual: pendingIsAnnual === "true" }),
+              });
+
+              if (response.ok) {
+                const { url } = await response.json();
+                if (url) {
+                  window.location.href = url;
+                  return;
+                }
+              }
+            } catch (error) {
+              console.error("Error redirecting to checkout:", error);
+            }
+          }
+
+          router.push("/company-details");
         }
       }
     });

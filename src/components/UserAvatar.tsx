@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { LogOut, Settings } from "lucide-react";
+import { LogOut } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,8 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { logout } from "@/app/actions/logout";
-import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";  // ✅ Use client-side signOut
 import { useInitials } from "@/hooks/useInitials";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { DropDown } from "./ui/drop-down";
@@ -27,13 +26,14 @@ type UserWidgetProps = {
 
 export const UserAvatar = ({ image, name }: UserWidgetProps) => {
   const initials = useInitials(name);
-  const router = useRouter();
-
 
   const onLogout = async () => {
     try {
-      await logout();
-      router.replace("/sign-in");
+      // ✅ This properly clears cookies and redirects
+      await signOut({ 
+        callbackUrl: "/login",  // or "/sign-in"
+        redirect: true 
+      });
     } catch (error) {
       console.error("Logout failed:", error);
     }

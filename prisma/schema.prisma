@@ -15,7 +15,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  // directUrl = env("DIRECT_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 /// The user of the system, storing personal + company info
@@ -31,6 +31,11 @@ model User {
   hasPaid                           Boolean   @default(false)
   paidAt                            DateTime?
   stripeCustomerId                  String?
+  stripeSubscriptionId              String?
+  subscriptionStatus                String?   // 'active', 'trialing', 'past_due', 'canceled', 'unpaid', etc.
+  subscriptionPlan                  String?   // 'monthly', 'annual'
+  subscriptionEndsAt                DateTime? // When subscription expires or ends
+  cancelAtPeriodEnd                 Boolean?  @default(false) // Whether subscription is set to cancel at period end
   /// ─────────── “Personal Details” Fields ───────────
   contactSalutation                 String?
   contactJobTitle                   String?
@@ -42,6 +47,7 @@ model User {
   companyName                       String?
   websiteUrl                        String?
   country                           String?
+  state                             String?
   companyBackground                 String?
   product                           String?
   competitorsUniqueValueProposition String?

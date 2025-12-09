@@ -13,10 +13,9 @@ export const Banner = ({
     <div
       className="
        cursor-pointer
-       mt-6
         w-full
         mx-auto
-        max-w-[960px]
+        max-w-[1200px]
         bg-[#24231F]
         hover:bg-[#24231F]/90
         text-[#F8EFC1]

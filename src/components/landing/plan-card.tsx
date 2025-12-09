@@ -4,7 +4,7 @@ import Link from "next/link";
 import React from "react";
 import { ChevronsRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, getSession } from "next-auth/react";
 
 interface PlanCardProps {
   title: string;
@@ -46,15 +46,63 @@ const PlanCard: React.FC<PlanCardProps> = ({
     "pro-right": "rounded-3xl",
   }[shape];
 
-  const handleSubscription = () => {
+  const handleSubscription = async () => {
     if (!paymentLink) return;
 
-    if (!session) {
+    // Get fresh session to ensure we have the latest auth state
+    const currentSession = await getSession();
+
+    // Check if user is authenticated - redirect to login if not
+    if (!currentSession?.user?.id) {
       sessionStorage.setItem("pendingPaymentLink", paymentLink);
-      router.push("/sign-in");
-    } else {
-      sessionStorage.removeItem("pendingPaymentLink");
-      window.location.href = paymentLink;
+      sessionStorage.setItem("pendingIsAnnual", String(isAnnual));
+      router.push("/login");
+      return;
+    }
+
+    try {
+      // Call the subscription checkout API
+      const response = await fetch(paymentLink, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isAnnual }),
+      });
+
+      // Handle 401 Unauthorized - redirect to login
+      if (response.status === 401) {
+        sessionStorage.setItem("pendingPaymentLink", paymentLink);
+        sessionStorage.setItem("pendingIsAnnual", String(isAnnual));
+        router.push("/login");
+        return;
+      }
+
+      if (!response.ok) {
+        let errorMessage = "Failed to start checkout. Please try again.";
+        try {
+          const error = await response.json();
+          console.error("Failed to create checkout session:", error);
+          errorMessage = error.details || error.error || errorMessage;
+        } catch (e) {
+          const text = await response.text();
+          console.error("Failed to parse error response:", text);
+          errorMessage = text || errorMessage;
+        }
+        alert(`Error: ${errorMessage}`);
+        return;
+      }
+
+      const { url } = await response.json();
+      if (url) {
+        window.location.href = url;
+      } else {
+        console.error("No checkout URL returned from API");
+        alert("Failed to get checkout URL. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      alert("An error occurred. Please try again.");
     }
   };
 
@@ -97,11 +145,11 @@ const PlanCard: React.FC<PlanCardProps> = ({
                   ${isAnnual ? monthlyEquivalent : monthlyPrice.toFixed(2)}
                   <span className="text-lg font-medium text-gray-400"> /month</span>
                 </p>
-                {isAnnual && (
+                {/* {isAnnual && (
                   <p className="text-start mt-1 text-sm text-gray-400">
                     Save ${annualPrice - monthlyPrice * 12} on an Annual Plan
                   </p>
-                )}
+                )} */}
               </>
             )}
           </div>
@@ -132,7 +180,9 @@ const PlanCard: React.FC<PlanCardProps> = ({
           <button
             disabled
             className="
-            mt-4 h-12 rounded-xl w-full bg-white/5 text-gray-300
+            cursor-pointer
+            mt-4 h-12 rounded-xl w-full bg-white/5 hover:bg-white/10 text-gray-300
+            transition-all duration-300
             font-semibold border border-white/10
           "
           >
@@ -142,8 +192,10 @@ const PlanCard: React.FC<PlanCardProps> = ({
           <button
             onClick={handleSubscription}
             className="
+            cursor-pointer
             mt-4 h-12 w-full rounded-xl font-semibold
-            bg-[#77F7CF] text-black hover:bg-[#77F7CF]/90
+            bg-[#77F7CF] text-black hover:bg-[#77F7CF]/70
+            transition-all duration-300
             shadow-[0_0_25px_rgba(119,247,207,0.5)]
             flex items-center justify-center gap-2
           "

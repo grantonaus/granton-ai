@@ -54,6 +54,7 @@ export default function BudgetDetailsDetails({
   const form = useForm<BudgetDetailsData>({
     resolver: zodResolver(budgetSchema),
     defaultValues: defaultValues ?? blankBudget,
+    mode: "onChange",
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -72,7 +73,7 @@ export default function BudgetDetailsDetails({
           <form
             id="stepForm"
             onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-4 max-w-[960px] mx-auto"
+            className="space-y-4 w-full mx-auto"
           >
             <div className="flex">
               <div className="w-auto font-semibold p-3 rounded-md text-[15px] bg-[#191C19] text-[#68FC92]">
@@ -80,8 +81,8 @@ export default function BudgetDetailsDetails({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 pt-4">
-              <div className="col-span-1 md:col-span-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+              <div>
                 <FormField
                   control={form.control}
                   name="allocationDetails"
@@ -105,7 +106,7 @@ export default function BudgetDetailsDetails({
               </div>
 
               {/* Grant Requirements (right column) */}
-              <div className="col-span-1 md:col-span-6">
+              <div>
                 <FormItem>
                   <FormLabel>Grant Requirements (Auto-Generated)</FormLabel>
                   <FormControl>
@@ -136,7 +137,7 @@ export default function BudgetDetailsDetails({
       </div>
 
       <div className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8">
-        <div className="max-w-[960px] mx-auto flex justify-between gap-4">
+        <div className="w-full flex justify-between gap-4">
           <Button
             variant="outline"
             className="flex-1 h-10 font-black text-white bg-[#0E0E0E] hover:bg-[#101010] border border-[#1C1C1C] hover:text-white cursor-pointer"
@@ -148,8 +149,8 @@ export default function BudgetDetailsDetails({
           <Button
             type="submit"
             form="stepForm"
-            className="flex-1 h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer"
-            disabled={isLoading}
+            className="flex-1 h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer disabled:bg-[#282828] disabled:text-[#626262] disabled:cursor-default"
+            disabled={isLoading || !form.formState.isValid}
           >
             <Loader loading={isLoading}>Continue</Loader>
           </Button>

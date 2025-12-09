@@ -20,6 +20,7 @@ interface ExpandableLinkMenuProps {
   active: boolean;
   submenus: Submenu[];
   isOpen: boolean | undefined;
+  onLinkClick?: () => void;
 }
 
 export function ExpandableLinkMenu({
@@ -29,6 +30,7 @@ export function ExpandableLinkMenu({
   active,
   submenus,
   isOpen,
+  onLinkClick,
 }: ExpandableLinkMenuProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -45,7 +47,7 @@ export function ExpandableLinkMenu({
         >
           <CollapsibleTrigger asChild>
             <div className="w-full flex justify-between items-center">
-              <Link href={href} className="flex items-center flex-grow">
+              <Link href={href} className="flex items-center flex-grow" onClick={onLinkClick}>
                 <span className="mr-3">
                   <Icon width={24} height={24} />
                 </span>
@@ -81,7 +83,7 @@ export function ExpandableLinkMenu({
             className="w-full justify-start h-10 pl-11"
             asChild
           >
-            <Link href={href} target="_blank" download>
+            <Link href={href} target="_blank" download onClick={onLinkClick}>
               <span className="mr-2 size-1.5 flex-shrink-0 rounded-full bg-muted-foreground" />
               <span className="truncate text-sm">{label}</span>
             </Link>

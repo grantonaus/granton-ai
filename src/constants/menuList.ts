@@ -4,7 +4,8 @@ import {
   CompanyDetailsIcon,
   PastApplicationsIcon,
   PersonalDetailsIcon,
-  MatchingGrantsIcon
+  MatchingGrantsIcon,
+  GrantDatabaseIcon
 } from "@/icons";
 import { Bookmark, GalleryVertical } from "lucide-react";
 
@@ -51,6 +52,13 @@ export function getMenuList(
           submenus: []
         },
         {
+          href: "/grant-database",
+          label: "Grant Database",
+          active: pathname.startsWith("/grant-database"),
+          icon: GrantDatabaseIcon,
+          submenus: []
+        },
+        {
           href: "/matching-grants",
           label: "Matching Grants",
           active: pathname.startsWith("/matching-grants"),
@@ -58,17 +66,17 @@ export function getMenuList(
           submenus: []
         },
         {
-          href: "/company-details",
-          label: "Company Details",
-          active: pathname.startsWith("/company-details"),
-          icon: CompanyDetailsIcon,
-          submenus: []
-        },
-        {
           href: "/personal-details",
           label: "Personal Details",
           active: pathname.startsWith("/personal-details"),
           icon: PersonalDetailsIcon,
+          submenus: []
+        },
+        {
+          href: "/company-details",
+          label: "Company Details",
+          active: pathname.startsWith("/company-details"),
+          icon: CompanyDetailsIcon,
           submenus: []
         },
         {

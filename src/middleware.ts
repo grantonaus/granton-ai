@@ -47,76 +47,132 @@
 // export const config = {
 //   matcher: ["/((?!.+\\.[\\w]+$|_next|favicon.ico|api/).*)"],
 // };
-import { auth } from "../auth";
+
+
+
+
+// import { auth } from "../auth";
+// import { NextResponse } from "next/server";
+
+// // Routes any visitor can access:
+// const PUBLIC_ROUTES = new Set([
+//   "/",
+//   "/login",
+//   "/sign-up",
+//   "/forgot-password",
+//   "/reset-password",
+//   "/new-password",
+// ]);
+
+// // Routes ONLY authenticated users can access:
+// const PROTECTED_ROUTES = new Set([
+//   "/new-application",
+//   "/past-applications",
+//   "/company-details",
+//   "/personal-details",
+//   "/matching-grants",
+//   "/grant-database",
+// ]);
+
+// export default auth((req) => {
+//   const pathname = req.nextUrl.pathname;
+//   const isLoggedIn = !!req.auth;
+
+//   const isPublic = PUBLIC_ROUTES.has(pathname);
+//   const isProtected = PROTECTED_ROUTES.has(pathname);
+
+//   // 1️⃣ The landing page (/) ALWAYS accessible
+//   if (pathname === "/") {
+//     return NextResponse.next();
+//   }
+
+//   // 2️⃣ Logged-in users cannot visit login or sign-up
+//   if (
+//     isLoggedIn &&
+//     (pathname === "/login" || pathname === "/sign-up")
+//   ) {
+//     return NextResponse.redirect(new URL("/new-application", req.url));
+//   }
+
+//   // 3️⃣ Protected routes → redirect unauthenticated users to /login
+//   if (isProtected && !isLoggedIn) {
+//     const url = new URL("/login", req.url);
+//     url.searchParams.set("callbackUrl", pathname);
+//     return NextResponse.redirect(url);
+//   }
+
+//   // 4️⃣ Public routes → always allowed
+//   if (isPublic) {
+//     return NextResponse.next();
+//   }
+
+//   // 5️⃣ Unknown routes → redirect based on authentication state
+//   const knownRoutes = new Set([...PUBLIC_ROUTES, ...PROTECTED_ROUTES]);
+
+//   if (!knownRoutes.has(pathname)) {
+//     if (!isLoggedIn) {
+//       return NextResponse.redirect(new URL("/login", req.url));
+//     }
+//     return NextResponse.redirect(new URL("/new-application", req.url));
+//   }
+
+//   return NextResponse.next();
+// });
+
+// // 🔧 matcher must avoid intercepting _next, static assets, API routes, etc.
+// export const config = {
+//   matcher: [
+//     "/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)",
+//   ],
+// };
+
+
+
+import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
 
-// Routes any visitor can access:
-const PUBLIC_ROUTES = new Set([
-  "/",
-  "/login",
-  "/sign-up",
-  "/forgot-password",
-  "/reset-password",
-  "/new-password",
-]);
+import authConfig from "../auth.config";
+import { apiAuthPrefix, DEFAULT_LOGIN_REDIRECT, authRoutes, publicRoutes } from "../routes";
 
-// Routes ONLY authenticated users can access:
-const PROTECTED_ROUTES = new Set([
-  "/new-application",
-  "/past-applications",
-  "/company-details",
-  "/personal-details",
-  "/matching-grants",
-]);
+const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
-  const pathname = req.nextUrl.pathname;
+  const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
 
-  const isPublic = PUBLIC_ROUTES.has(pathname);
-  const isProtected = PROTECTED_ROUTES.has(pathname);
+  const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
+  const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
+  const isAuthRoute = authRoutes.some((route) => new RegExp(route).test(nextUrl.pathname));
 
-  // 1️⃣ The landing page (/) ALWAYS accessible
-  if (pathname === "/") {
+  if (isApiAuthRoute) {
     return NextResponse.next();
   }
 
-  // 2️⃣ Logged-in users cannot visit login or sign-up
-  if (
-    isLoggedIn &&
-    (pathname === "/login" || pathname === "/sign-up")
-  ) {
-    return NextResponse.redirect(new URL("/new-application", req.url));
-  }
-
-  // 3️⃣ Protected routes → redirect unauthenticated users to /login
-  if (isProtected && !isLoggedIn) {
-    const url = new URL("/login", req.url);
-    url.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(url);
-  }
-
-  // 4️⃣ Public routes → always allowed
-  if (isPublic) {
-    return NextResponse.next();
-  }
-
-  // 5️⃣ Unknown routes → redirect based on authentication state
-  const knownRoutes = new Set([...PUBLIC_ROUTES, ...PROTECTED_ROUTES]);
-
-  if (!knownRoutes.has(pathname)) {
-    if (!isLoggedIn) {
-      return NextResponse.redirect(new URL("/login", req.url));
+  if (isAuthRoute) {
+    if (isLoggedIn) {
+      return NextResponse.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl));
     }
-    return NextResponse.redirect(new URL("/new-application", req.url));
+    return NextResponse.next();
+  }
+
+  if (!isLoggedIn && !isPublicRoute) {
+    let callbackUrl = nextUrl.pathname;
+    if (nextUrl.search) {
+      callbackUrl += nextUrl.search;
+    }
+
+    const encodedCallbackUrl = encodeURIComponent(callbackUrl);
+
+    return NextResponse.redirect(new URL(
+      `/login?callbackUrl=${encodedCallbackUrl}`,
+      nextUrl
+    ));
   }
 
   return NextResponse.next();
-});
+})
 
-// 🔧 matcher must avoid intercepting _next, static assets, API routes, etc.
+// Optionally, don't invoke Middleware on some paths
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api|.*\\..*$).*)",
-  ],
-};
+  matcher: ['/((?!.+\\.[\\w]+$|_next).*)', '/', '/(api|trpc)(.*)'],
+}

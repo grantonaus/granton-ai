@@ -1,27 +1,24 @@
 "use server";
 
-import { client } from "@/lib/prisma";
 import { auth } from "../../../auth";
+import { hasActiveSubscription } from "@/lib/subscription";
 
+/**
+ * Check if the current user has an active premium subscription
+ * Uses the consolidated subscription checking logic
+ */
 export async function isUserPremium() {
   const session = await auth();
   const user = session?.user;
 
-  if (!user) {
+  if (!user?.id) {
     return { success: false, subscribed: false };
   }
 
-  const existingUser = await client.user.findUnique({
-    where: { id: user.id },
-    select: { hasPaid: true },
-  });
-
-  if (!existingUser) {
-    return { success: false, subscribed: false };
-  }
+  const subscribed = await hasActiveSubscription(user.id);
 
   return {
     success: true,
-    subscribed: existingUser.hasPaid === true,
+    subscribed,
   };
 }

@@ -1,11 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowDown } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 
 const steps = [
     {
         id: 1,
+        number: "01",
         title: "Create Your Profile",
         time: "2 minutes",
         description:
@@ -13,6 +14,7 @@ const steps = [
     },
     {
         id: 2,
+        number: "02",
         title: "AI Analysis",
         time: "Instant",
         description:
@@ -20,6 +22,7 @@ const steps = [
     },
     {
         id: 3,
+        number: "03",
         title: "Get Matched",
         time: "Real-time",
         description:
@@ -27,6 +30,7 @@ const steps = [
     },
     {
         id: 4,
+        number: "04",
         title: "Apply & Track",
         time: "Ongoing",
         description:
@@ -36,10 +40,8 @@ const steps = [
 
 export default function HowItWorks() {
     return (
-        <section className="relative w-full overflow-hidden flex flex-col items-center text-center px-5 py-24">
-            {/* Heading */}
-        
-
+        <section className="relative w-full max-w-5xl overflow-hidden flex flex-col items-center text-center px-5 py-24">
+            {/* Badge */}
             <motion.div
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -49,14 +51,14 @@ export default function HowItWorks() {
                 <span className="text-md font-bold text-[#24bbb1]">How It Works</span>
             </motion.div>
 
-
+            {/* Heading */}
             <motion.h1
                 initial={{ opacity: 0, y: -12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7 }}
                 className="mt-2 text-5xl font-bold tracking-tight text-white sm:text-6xl"
             >
-                 From profile to <span className="text-[#77F7CF]">funding</span> in 4 steps
+                From profile to <span className="text-[#77F7CF]">funding</span> in 4 steps
             </motion.h1>
 
             {/* Subtext */}
@@ -70,47 +72,115 @@ export default function HowItWorks() {
                 in minutes, not weeks.
             </motion.p>
 
-            {/* Steps */}
-            {/* <div className="mt-20 flex flex-col gap-24 max-w-5xl mx-auto px-6">
-                {steps.map((step, index) => (
-                    <div
-                        key={step.id}
-                        className={`
-              flex flex-col md:flex-row items-center gap-10
-              ${index % 2 === 1 ? "md:flex-row-reverse" : ""}
-            `}
-                    >
+            {/* Steps Grid - Full Width Container on Desktop */}
+            <div className="mt-16 w-full max-w-7xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-4">
+                    {steps.map((step, index) => (
+                        <motion.div
+                            key={step.id}
+                            initial={{ opacity: 0, y: 0 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.7, delay: index * 0.1 }}
+                            whileHover={{
+                                boxShadow: "0px 20px 50px rgba(0,0,0,0.55)",
+                                borderColor: "rgba(119,247,207,0.3)",
+                                transform: "translateY(-4px)",
+                            }}
+                            className="
+                                relative group
+                                flex flex-col
+                                rounded-xl p-6
+                                bg-[#0C0C0C]
+                                border border-white/10
+                                shadow-2xl
+                                overflow-hidden
+                                transition-all duration-300
+                                h-full
+                            "
+                        >
+                            {/* Teal accent stripe */}
+                            <div className="
+                                absolute left-0 top-0 h-full w-[3px]
+                                bg-gradient-to-b from-[#77F7CF] to-transparent opacity-70
+                            " />
 
-                        <div className="flex flex-col items-center md:items-start">
-                            <div className="h-20 w-20 rounded-full bg-[#77F7CF]/10 border border-[#77F7CF]/30 flex items-center justify-center">
-                                <span className="text-3xl font-bold text-[#77F7CF]">
-                                    {step.id}
+                            {/* Inner glow */}
+                            <div className="
+                                absolute inset-0 
+                                bg-gradient-to-br from-[#77F7CF]/5 via-transparent to-transparent 
+                                opacity-40 blur-xl
+                            " />
+
+                            {/* Diagonal Light Streak on Hover */}
+                            <div className="
+                                absolute -top-10 -right-10 rotate-45
+                                w-40 h-[2px]
+                                bg-gradient-to-r from-transparent via-[#77F7CF]/40 to-transparent
+                                opacity-0 group-hover:opacity-100
+                                transition-all duration-700
+                            " />
+
+                            {/* Number Badge */}
+                            <div className="relative flex items-center justify-center mb-4">
+                                <div className="
+                                    w-16 h-16 rounded-full
+                                    bg-gradient-to-br from-[#77F7CF]/20 to-[#77F7CF]/5
+                                    border border-[#77F7CF]/30
+                                    flex items-center justify-center
+                                    relative
+                                ">
+                                    <div className="absolute inset-0 rounded-full bg-[#77F7CF]/20 blur-lg"></div>
+                                    <span className="relative text-2xl font-bold text-[#77F7CF]">
+                                        {step.number}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Time Badge */}
+                            <div className="mb-3">
+                                <span className="
+                                    inline-flex items-center gap-1.5
+                                    text-xs font-medium px-2.5 py-1 rounded-md
+                                    bg-white/5 border border-white/10 text-[#77F7CF]
+                                ">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    {step.time}
                                 </span>
                             </div>
 
-
-                            {index < steps.length - 1 && (
-                                <ArrowDown className="hidden md:block mt-6 text-gray-700 size-7 mx-auto" />
-                            )}
-                        </div>
-
-
-                        <div className="flex-1 text-center md:text-left">
-                            <p className="text-sm font-semibold text-gray-400 mb-1">
-                                {step.time}
-                            </p>
-
-                            <h3 className="text-2xl font-semibold text-white">
+                            {/* Title */}
+                            <h3 className="
+                                text-xl font-semibold text-white tracking-tight
+                                mb-3
+                                group-hover:text-[#77F7CF]
+                                transition-colors duration-300
+                            ">
                                 {step.title}
                             </h3>
 
-                            <p className="mt-3 text-gray-300 text-lg leading-relaxed max-w-md mx-auto md:mx-0">
+                            {/* Description */}
+                            <p className="
+                                text-[15px] text-gray-400 font-medium
+                                leading-relaxed
+                                flex-grow
+                            ">
                                 {step.description}
                             </p>
-                        </div>
-                    </div>
-                ))}
-            </div> */}
+
+                            {/* Connecting Line (hidden on last item in row and mobile) */}
+                            {index < steps.length - 1 && index % 2 === 0 && (
+                                <div className="
+                                    hidden md:block
+                                    absolute -right-3 top-1/2 -translate-y-1/2
+                                    w-6 h-[2px]
+                                    bg-gradient-to-r from-[#77F7CF]/40 to-transparent
+                                " />
+                            )}
+                        </motion.div>
+                    ))}
+                </div>
+            </div>
         </section>
     );
 }

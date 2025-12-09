@@ -36,8 +36,9 @@ export async function Sidebar() {
       className={cn(
         "fixed top-0 left-0 z-40 h-screen bg-[#121212] -translate-x-full lg:translate-x-0 transition-[width] ease-in-out duration-300 w-80"
       )}
+      style={{ resize: 'none' }}
     >
-      <div className="relative h-full flex flex-col px-7 pt-8 pb-4 overflow-y-auto">
+      <div className="relative h-full flex flex-col px-7 pt-8 pb-4 overflow-y-auto" style={{ resize: 'none' }}>
         <Button
           className={cn(
             "flex flex-row items-center transition-transform ease-in-out duration-300 mb-1 justify-start translate-x-0"

@@ -30,6 +30,7 @@ import { useSession } from "next-auth/react";
 import FileUpload from "./FileUpload";
 import Spinner from "./Spinner";
 import { useRouter } from "next/navigation";
+import { Sparkles } from "lucide-react";
 
 
 const companySchema = z.object({
@@ -38,6 +39,7 @@ const companySchema = z.object({
   }),
   company_name: z.string().min(1, "Required"),
   country: z.string().min(1, "Required"),
+  state: z.string().optional(),
   company_background: z.string().min(1, "Required"),
   product: z.string().min(1, "Required"),
   competitors_unique_value_proposition: z.string().min(1, "Required"),
@@ -62,6 +64,7 @@ const blankCompany: CompanyDetailsData = {
   website_url: "",
   company_name: "",
   country: "",
+  state: "",
   company_background: "",
   product: "",
   competitors_unique_value_proposition: "",
@@ -111,18 +114,41 @@ export default function CompanyDetails({
     defaultValues: defaultValues ?? blankCompany,
   });
 
-
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
+  // Only fetch data if defaultValues are not provided (for backward compatibility)
+  // If defaultValues are provided, use them directly - this prevents double fetching
   useEffect(() => {
+    // If defaultValues are provided, use them and skip fetching
+    if (defaultValues && Object.keys(defaultValues).length > 0) {
+      const formData = {
+        website_url: defaultValues.website_url ?? "",
+        company_name: defaultValues.company_name ?? "",
+        country: defaultValues.country ?? "",
+        state: defaultValues.state ?? "",
+        company_background: defaultValues.company_background ?? "",
+        product: defaultValues.product ?? "",
+        competitors_unique_value_proposition:
+          defaultValues.competitors_unique_value_proposition ?? "",
+        current_stage: defaultValues.current_stage ?? "",
+        main_objective: defaultValues.main_objective ?? "",
+        target_customers: defaultValues.target_customers ?? "",
+        funding_status: defaultValues.funding_status ?? "",
+        attachments: defaultValues.attachments ?? [],
+      };
+      form.reset(formData);
+      setExistingAttachments(defaultValues.attachments ?? []);
+      return;
+    }
+
+    // Only fetch if no defaultValues provided (backward compatibility)
     async function fetchCompanyData() {
       try {
         const response = await fetch("/api/company", {
           cache: "no-cache",
         });
 
-        console.log("response", response);
         if (!response.ok) {
           console.error(
             "Failed to fetch company data:",
@@ -133,12 +159,12 @@ export default function CompanyDetails({
         }
 
         const data: Partial<CompanyDetailsData> = await response.json();
-        console.log("↩️  Parsed GET /api/company JSON:", data);
 
         form.reset({
           website_url: data.website_url ?? "",
           company_name: data.company_name ?? "",
           country: data.country ?? "",
+          state: data.state ?? "",
           company_background: data.company_background ?? "",
           product: data.product ?? "",
           competitors_unique_value_proposition:
@@ -150,21 +176,15 @@ export default function CompanyDetails({
           attachments: data.attachments ?? [],
         });
 
-        console.log(
-          "↩️  Existing attachments array from GET:",
-          data.attachments
-        );
-
         setExistingAttachments(data.attachments ?? []);
       } catch (err) {
         console.error("Error fetching company data:", err);
-      } finally {
-        setIsLoading(false);
       }
     }
 
     fetchCompanyData();
-  }, [form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultValues]);
 
   const router = useRouter();
 
@@ -248,6 +268,7 @@ export default function CompanyDetails({
         company_name: values.company_name,
         website_url: values.website_url,
         country: values.country,
+        state: values.state,
         company_background: values.company_background,
         product: values.product,
         competitors_unique_value_proposition:
@@ -291,80 +312,97 @@ export default function CompanyDetails({
 
 
 
-  if (isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-gray-400">
-        <Spinner />
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-2 pb-8 mt-4 md:mt-8">
+      <div className="flex-1 min-h-0 overflow-y-auto px-8 pt-2 pb-8 mt-4 md:mt-8">
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-4 max-w-[960px] mx-auto"
+            className="space-y-4 w-full"
           >
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-3">
-              <div className="col-span-1 xl:col-span-4">
-                <FormField
-                  control={form.control}
-                  name="website_url"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Website URL</FormLabel>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="website_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Website URL</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="https://www.yourcompany.com"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="company_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="FutureTech Pty Ltd"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="country"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Country</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Australia"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value ?? ""}
+                    >
                       <FormControl>
-                        <Input
-                          placeholder="https://www.yourcompany.com"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-1 xl:col-span-4">
-                <FormField
-                  control={form.control}
-                  name="company_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Company Name</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="FutureTech Pty Ltd"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-1 xl:col-span-4">
-                <FormField
-                  control={form.control}
-                  name="country"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Country</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Australia"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                      <SelectContent>
+                        <SelectItem value="NSW">NSW - New South Wales</SelectItem>
+                        <SelectItem value="VIC">VIC - Victoria</SelectItem>
+                        <SelectItem value="QLD">QLD - Queensland</SelectItem>
+                        <SelectItem value="WA">WA - Western Australia</SelectItem>
+                        <SelectItem value="SA">SA - South Australia</SelectItem>
+                        <SelectItem value="TAS">TAS - Tasmania</SelectItem>
+                        <SelectItem value="ACT">ACT - Australian Capital Territory</SelectItem>
+                        <SelectItem value="NT">NT - Northern Territory</SelectItem>
+                        <SelectItem value="National">National</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <FormField
@@ -381,6 +419,59 @@ export default function CompanyDetails({
                       value={field.value ?? ""}
                     />
                   </FormControl>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={async () => {
+                      setIsGenerating(true);
+                      try {
+                        const formValues = form.getValues();
+                        const response = await fetch("/api/generate-company-background", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            company_name: formValues.company_name,
+                            website_url: formValues.website_url,
+                            country: formValues.country,
+                            product: formValues.product,
+                            competitors_unique_value_proposition: formValues.competitors_unique_value_proposition,
+                            current_stage: formValues.current_stage,
+                            main_objective: formValues.main_objective,
+                            target_customers: formValues.target_customers,
+                            funding_status: formValues.funding_status,
+                          }),
+                        });
+
+                        if (!response.ok) {
+                          const error = await response.json();
+                          throw new Error(error.error || "Failed to generate");
+                        }
+
+                        const data = await response.json();
+                        form.setValue("company_background", data.company_background);
+                        toast.success("Company background generated successfully!");
+                      } catch (err: any) {
+                        console.error("Error generating company background:", err);
+                        toast.error(err.message || "Failed to generate company background");
+                      } finally {
+                        setIsGenerating(false);
+                      }
+                    }}
+                    disabled={isGenerating}
+                    className="cursor-pointer mt-1 w-full h-11 flex items-center justify-center gap-2 bg-[#151414] text-white hover:bg-[#151414]/80 hover:text-white transition-colors"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <div className="size-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="size-4" />
+                        Generate with AI
+                      </>
+                    )}
+                  </Button>
                   <FormMessage />
                 </FormItem>
               )}
@@ -565,7 +656,7 @@ export default function CompanyDetails({
       </div>
 
       <div className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8">
-        <div className="max-w-[1000px] mx-auto flex justify-between gap-4 px-5">
+        <div className="w-full px-8 flex justify-between gap-4">
           <Button
             onClick={form.handleSubmit(onSubmit)}
             className="w-full h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer"

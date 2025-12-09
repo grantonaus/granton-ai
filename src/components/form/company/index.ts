@@ -8,6 +8,7 @@ export const CompanySchema = z.object({
     // .url("Must be a valid URL")
     .min(1, "Website URL is required"),
   country: z.string().min(1, "Country is required"),
+  state: z.string().optional(),
   company_background: z.string().min(1, "Company background is required"),
   product: z.string().min(1, "Product/Service is required"),
   competitors_unique_value_proposition: z

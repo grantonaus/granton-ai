@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ContentLayout } from "@/components/ContentLayout";
-import StepCompanyDetails, { CompanyDetailsData } from "@/components/StepCompanyDetails";
+import { useEffect, useState, useCallback } from "react";
 import StepGrantDetails, { GrantDetailsData } from "@/components/StepGrantDetails";
 import { StepTracker } from "@/components/Stepper";
 import BudgetDetailsDetails, { BudgetDetailsData } from "@/components/StepBudget";
@@ -10,193 +8,140 @@ import AdditionalQuestions, { Message } from "@/components/StepAdditionalQuestio
 import Finalise from "@/components/StepFinalise";
 import { Banner } from "@/components/Banner";
 import { usePersonal } from "@/contexts/PersonalContext";
-import Spinner from "@/components/Spinner";
 import { useCurrentUser } from "@/hooks/user";
-import { isProfileComplete } from "@/app/actions/profile-complete";
-import { loadStripe } from "@stripe/stripe-js";
+import { processAttachments } from "@/lib/file-upload";
+import type { CompanyDetailsData } from "@/components/StepCompanyDetails";
+
+const MAX_STEPS = 5;
+const DEFAULT_APPLICATION_TITLE = "Grant_Application";
 
 export default function NewApplicationPage() {
-
   const { session } = useCurrentUser();
   const { hasPersonalDetails, hasCompanyDetails } = usePersonal();
 
-  const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
-
-  const [checkingPayment, setCheckingPayment] = useState(true);
-
   const [currentStep, setCurrentStep] = useState(1);
-
-
   const [companyDetails, setCompanyDetails] = useState<CompanyDetailsData>();
-  const [isLoadingCompany, setIsLoadingCompany] = useState(true);
-
   const [grantDetails, setGrantDetails] = useState<GrantDetailsData>();
-  const [aiGrantRequirements, setAiGrantRequirements] = useState<string>("");
-
-  const [formQuestionsMarkdown, setFormQuestionsMarkdown] = useState<string>("");
-
   const [budgetDetails, setBudgetDetails] = useState<BudgetDetailsData>();
-
+  const [aiGrantRequirements, setAiGrantRequirements] = useState<string>("");
   const [combinedFormText, setCombinedFormText] = useState<string>("");
-
-  const [chatHistory, setChatHistory] = useState<Message[]>([]);
   const [generatedApplication, setGeneratedApplication] = useState<string>("");
-  const [applicationTitle, setApplicationTitle] = useState<string>("Grant_Application")
+  const [applicationTitle, setApplicationTitle] = useState<string>(
+    DEFAULT_APPLICATION_TITLE
+  );
 
-  const [submitting, setSubmitting] = useState(false);
+  const nextStep = useCallback(
+    () => setCurrentStep((s) => Math.min(s + 1, MAX_STEPS)),
+    []
+  );
+  const prevStep = useCallback(
+    () => setCurrentStep((s) => Math.max(s - 1, 1)),
+    []
+  );
 
-  const nextStep = () => setCurrentStep((s) => Math.min(s + 1, 5));
-  const prevStep = () => setCurrentStep((s) => Math.max(s - 1, 1));
-
-  async function handleCompanyNext(data: CompanyDetailsData) {
-
-    // setCompanyDetails(data);
-
-    const newFiles: File[] = [];
-    const existingAttachments: Array<{ name: string; url: string; key: string }> = [];
-
-    (data.attachments || []).forEach((att) => {
-      if (att instanceof File) {
-        newFiles.push(att);
-      } else {
-        existingAttachments.push({ name: att.name, url: att.url, key: att.key });
+  const handleCompanyNext = useCallback(
+    async (data: CompanyDetailsData) => {
+      if (!session?.user?.id) {
+        return;
       }
-    });
 
-    const uploadedAttachments: Array<{ name: string; url: string; key: string }> = [];
-
-    for (const file of newFiles) {
       try {
-        const presignRes = await fetch(
-          `/api/s3-upload-url?fileName=${encodeURIComponent(file.name)}&userId=${encodeURIComponent(
-            session!.user.id!
-          )}`
+        const finalAttachments = await processAttachments(
+          data.attachments || [],
+          session.user.id
         );
-        if (!presignRes.ok) {
-          const errTxt = await presignRes.text().catch(() => "no text");
-          console.error("🛑 Failed to get presigned URL for", file.name, ":", errTxt);
-          continue;
-        }
-        const { uploadUrl, key } = await presignRes.json();
 
-        const uploadRes = await fetch(uploadUrl, {
-          method: "PUT",
-          body: file,
-          headers: { "Content-Type": file.type || "application/pdf" },
+        const updatedCompany: CompanyDetailsData = {
+          ...data,
+          attachments: finalAttachments,
+        };
+        setCompanyDetails(updatedCompany);
+
+        const payload: CompanyDetailsData = {
+          website_url: data.website_url,
+          company_name: data.company_name,
+          country: data.country,
+          company_background: data.company_background,
+          product: data.product,
+          competitors_unique_value_proposition:
+            data.competitors_unique_value_proposition,
+          current_stage: data.current_stage,
+          main_objective: data.main_objective,
+          target_customers: data.target_customers,
+          funding_status: data.funding_status,
+          attachments: finalAttachments,
+        };
+
+        const res = await fetch("/api/company", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
         });
-        if (!uploadRes.ok) {
-          const text = await uploadRes.text().catch(() => "(no text)");
-          console.error("🛑 S3 upload failed for", file.name, ":", text);
-          continue;
+
+        if (!res.ok) {
+          const errTxt = await res.text().catch(() => "Unknown error");
+          throw new Error(`Failed to save company data: ${errTxt}`);
         }
 
-        // const objectUrl = `https://company-attachments-bucket.s3.eu-north-1.amazonaws.com/${encodeURIComponent(
-        //   key
-        // )}`;
-
-        const objectUrl = `https://${process.env.NEXT_PUBLIC_S3_BUCKET_NAME}.s3.${process.env.NEXT_PUBLIC_AWS_REGION}.amazonaws.com/${encodeURIComponent(key)}`;
-
-
-        uploadedAttachments.push({ name: file.name, url: objectUrl, key });
-      } catch (err) {
-        console.error("🛑 Exception uploading file:", file.name, err);
+        nextStep();
+      } catch (error) {
+        console.error("Error processing company details:", error);
       }
-    }
+    },
+    [session?.user?.id, nextStep]
+  );
 
-    const finalAttachments = [
-      ...existingAttachments,
-      ...uploadedAttachments,
-    ];
 
-    const updatedCompany: CompanyDetailsData = {
-      ...data,
-      attachments: finalAttachments,
-    };
-    setCompanyDetails(updatedCompany);
-  
+  const handleGrantNext = useCallback(
+    async (data: GrantDetailsData) => {
+      setGrantDetails(data);
 
-    const payload: CompanyDetailsData = {
-      website_url: data.website_url,
-      company_name: data.company_name,
-      country: data.country,
-      company_background: data.company_background,
-      product: data.product,
-      competitors_unique_value_proposition: data.competitors_unique_value_proposition,
-      current_stage: data.current_stage,
-      main_objective: data.main_objective,
-      target_customers: data.target_customers,
-      funding_status: data.funding_status,
-      attachments: finalAttachments,
-    };
+      const form = new FormData();
 
-    try {
-      const res = await fetch("/api/company", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const errTxt = await res.text().catch(() => "no text");
-        console.error("🛑 Failed to save company data:", res.status, errTxt);
-        return; 
+      if (data.guidelinesFile) {
+        form.append("guidelinesFile", data.guidelinesFile);
+      } else if (data.guidelinesLink?.trim()) {
+        form.append("guidelinesLink", data.guidelinesLink.trim());
       }
 
-      console.log("company payload:", payload)
+      if (data.applicationFormFile) {
+        form.append("applicationFormFile", data.applicationFormFile);
+      } else if (data.applicationFormLink?.trim()) {
+        form.append("applicationFormLink", data.applicationFormLink.trim());
+      }
+
+      try {
+        const res = await fetch("/api/ai_budget", {
+          method: "POST",
+          body: form,
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text().catch(() => "Unknown error");
+          console.error("Failed to extract grant requirements:", errorText);
+          setAiGrantRequirements("");
+        } else {
+          const json: { aiGrantExtraction: string } = await res.json();
+          setAiGrantRequirements(json.aiGrantExtraction);
+        }
+      } catch (error) {
+        console.error("Error calling /api/ai_budget:", error);
+        setAiGrantRequirements("");
+      }
 
       nextStep();
-    } catch (err) {
-      console.error("🛑 Error calling /api/company:", err);
-      return;
-    }
-  }
+    },
+    [nextStep]
+  );
 
 
-  const handleGrantNext = async (data: GrantDetailsData) => {
-    setGrantDetails(data);
-
-    console.log("GrantDetails payload:", data);
-
-    const form = new FormData();
-
-    if (data.guidelinesFile) {
-      form.append("guidelinesFile", data.guidelinesFile);
-    } else if (data.guidelinesLink?.trim()) {
-      form.append("guidelinesLink", data.guidelinesLink.trim());
-    }
-
-    if (data.applicationFormFile) {
-      form.append("applicationFormFile", data.applicationFormFile);
-    } else if (data.applicationFormLink?.trim()) {
-      form.append("applicationFormLink", data.applicationFormLink.trim());
-    }
-
-    try {
-      const res = await fetch("/api/ai_budget", {
-        method: "POST",
-        body: form,
-      });
-
-      if (!res.ok) {
-        console.error("Extraction failed:", res.status, await res.text());
-        setAiGrantRequirements("");
-      } else {
-        const json: { aiGrantExtraction: string } = await res.json();
-        setAiGrantRequirements(json.aiGrantExtraction);
-      }
-    } catch (err) {
-      console.error("Error calling /api/ai_budget:", err);
-      setAiGrantRequirements("");
-    }
-
-    nextStep();
-  };
-
-
-  const handleBudgetNext = async (data: BudgetDetailsData) => {
-    setBudgetDetails(data);
-    nextStep();
-  };
+  const handleBudgetNext = useCallback(
+    (data: BudgetDetailsData) => {
+      setBudgetDetails(data);
+      nextStep();
+    },
+    [nextStep]
+  );
 
 
   useEffect(() => {
@@ -204,19 +149,14 @@ export default function NewApplicationPage() {
       try {
         const res = await fetch("/api/company", { cache: "no-cache" });
         if (!res.ok) {
-          console.error(
-            "Failed to fetch company data:",
-            res.status,
-            await res.text()
-          );
+          const errorText = await res.text().catch(() => "Unknown error");
+          console.error("Failed to fetch company data:", res.status, errorText);
           return;
         }
         const data: CompanyDetailsData = await res.json();
         setCompanyDetails(data);
-      } catch (err) {
-        console.error("Error fetching company data:", err);
-      } finally {
-        setIsLoadingCompany(false);
+      } catch (error) {
+        console.error("Error fetching company data:", error);
       }
     }
 
@@ -225,121 +165,105 @@ export default function NewApplicationPage() {
 
 
 
-  async function handleGenerateApplication(messages: Message[]) {
-
-    // if (!session?.user?.hasPaid) {
-    //   const stripe = await stripePromise;
-    //   const res = await fetch("/api/stripe/create-session", { method: "POST" });
-    //   if (!res.ok) {
-    //     console.error("Stripe session creation failed:", await res.text());
-    //     return;
-    //   }
-    //   const { url } = await res.json();
-    //   if (stripe && url) {
-    //     window.location.href = url;
-    //   }
-    //   return; // do not proceed to generation
-    // }
-
-    setChatHistory(messages);
-
-    // call your API
-    const res = await fetch("/api/generate_grant_application", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        combinedText: combinedFormText,
-        messages,
-      }),
-    });
-    if (!res.ok) {
-      console.error("Generate failed:", await res.text());
-      return;
-    }
-    const { title, text } = await res.json();
-
-    setApplicationTitle(title);
-    setGeneratedApplication(text);
-    nextStep();
-  }
-
-
-
-  const submitAll = async () => {
-
-    if (!session?.user.hasPaid) {
-      setSubmitting(true);
+  const handleGenerateApplication = useCallback(
+    async (messages: Message[]) => {
       try {
-        const res = await fetch("/api/stripe/create-session", {
+        const res = await fetch("/api/generate_grant_application", {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            combinedText: combinedFormText,
+            messages,
+          }),
         });
+
+        if (!res.ok) {
+          const errorText = await res.text().catch(() => "Unknown error");
+          console.error("Failed to generate application:", errorText);
+          return;
+        }
+
+        const { title, text } = await res.json();
+        setApplicationTitle(title || DEFAULT_APPLICATION_TITLE);
+        setGeneratedApplication(text);
+        nextStep();
+      } catch (error) {
+        console.error("Error generating application:", error);
+      }
+    },
+    [combinedFormText, nextStep]
+  );
+
+
+
+  const submitAll = useCallback(async () => {
+    if (!session?.user.hasPaid) {
+      try {
+        const res = await fetch("/api/stripe/checkout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ isAnnual: false }),
+        });
+
+        if (!res.ok) {
+          let errorMessage = "Failed to create checkout session";
+          try {
+            const errorText = await res.json();
+            errorMessage = errorText.details || errorText.error || errorMessage;
+          } catch (e) {
+            const text = await res.text();
+            errorMessage = text || errorMessage;
+          }
+          throw new Error(errorMessage);
+        }
+
         const { url } = await res.json();
-        window.location.href = url;
-      } catch (err) {
-        console.error("🛑 Couldn’t start checkout:", err);
-        setSubmitting(false);
+        if (url) {
+          window.location.href = url;
+        } else {
+          throw new Error("No checkout URL returned from API");
+        }
+      } catch (error: any) {
+        console.error("Error starting checkout:", error);
+        alert(error.message || "Failed to start checkout. Please try again.");
       }
       return;
     }
 
-
-    // setSubmitting(true);
-    const payload = { ...companyDetails, ...grantDetails, ...budgetDetails };
-
-    console.log("payload: ", payload)
-    // try {
-    //   const res = await fetch("/api/application", {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify(payload),
-    //   });
-    //   if (!res.ok) throw new Error(await res.text());
-    // } catch (err) {
-    //   console.error("🛑 Submission failed:", err);
-    // } finally {
-    //   setSubmitting(false);
-    // }
-
     nextStep();
-  };
+  }, [session?.user.hasPaid, nextStep]);
 
 
 
+
+  const showBanner = !hasPersonalDetails || !hasCompanyDetails;
+  const isProfileComplete = hasPersonalDetails && hasCompanyDetails;
 
   return (
-    <ContentLayout title="New Grant Application">
+    <div className="w-full min-h-full bg-[#0F0F0F] overscroll-none mt-0">
+      <div className="sticky top-0 z-30 bg-[#0d0d0d] overscroll-none mb-2">
+        <div
+          className={`px-5 lg:px-8 max-w-[1400px] mx-auto pb-2 lg:pb-4 ${
+            showBanner ? "pt-0 lg:pt-8" : "pt-0 lg:pt-0"
+          }`}
+        >
+          {showBanner && <Banner />}
+        </div>
+        <div className="w-full">
+          <StepTracker currentStep={currentStep} onStepClick={setCurrentStep} />
+        </div>
+      </div>
 
-      <div className="flex flex-col h-full px-5 min-[1340px]:px-0">
-
-        {(!hasPersonalDetails || !hasCompanyDetails) && (
-          <Banner />
-        )}
-
-        <StepTracker currentStep={currentStep} onStepClick={setCurrentStep} />
-
+      <div className="flex flex-col h-full px-5 lg:px-8 max-w-[1400px] mx-auto">
         <div className="flex-1 overflow-hidden">
-          {/* {currentStep === 1 && (
-            <>
-              {isLoadingCompany ? (
-                <div className="h-[75vh] flex-1 flex items-center justify-center text-gray-400">
-                  <Spinner />
-                </div>
-              ) : (
-                <StepCompanyDetails
-                  defaultValues={companyDetails}
-                  onNext={handleCompanyNext}
-                />
-              )}
-            </>
-          )} */}
-
-
           {currentStep === 1 && (
             <StepGrantDetails
               defaultValues={grantDetails}
               onNext={handleGrantNext}
               onBack={prevStep}
-              isProfileComplete={hasPersonalDetails && hasCompanyDetails}
+              isProfileComplete={isProfileComplete}
             />
           )}
 
@@ -353,27 +277,28 @@ export default function NewApplicationPage() {
             />
           )}
 
-          {currentStep === 3 &&
+          {currentStep === 3 && companyDetails && grantDetails && budgetDetails && (
             <AdditionalQuestions
               onBack={prevStep}
               onNext={handleGenerateApplication}
-              companyDetails={companyDetails!} 
-              grantDetails={grantDetails!}    
-              budgetDetails={budgetDetails!}   
-              applicationFormFile={grantDetails?.applicationFormFile ?? null}
-              applicationFormLink={grantDetails?.applicationFormLink ?? ""}
+              companyDetails={companyDetails}
+              grantDetails={grantDetails}
+              budgetDetails={budgetDetails}
+              applicationFormFile={grantDetails.applicationFormFile ?? null}
+              applicationFormLink={grantDetails.applicationFormLink ?? ""}
               setCombinedFormText={setCombinedFormText}
             />
-          }
+          )}
 
-          {currentStep === 4 && 
-            <Finalise 
-              applicationText={generatedApplication} 
-              applicationTitle={applicationTitle} 
-            />}
+          {currentStep === 4 && (
+            <Finalise
+              applicationText={generatedApplication}
+              applicationTitle={applicationTitle}
+            />
+          )}
         </div>
       </div>
-    </ContentLayout>
+    </div>
   );
 }
 

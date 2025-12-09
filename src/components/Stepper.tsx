@@ -1,6 +1,7 @@
 "use client";
 
 import { FC } from "react";
+import React from "react";
 
 const defaultSteps = [
   // "Company Details",
@@ -23,15 +24,15 @@ export const StepTracker: FC<StepTrackerProps> = ({
 }) => {
   const lastStep = steps.length;
   return (
-    <nav aria-label="Progress" className="w-full max-w-[960px] mx-auto pt-7 pb-4">
-      <div className="xl:flex hidden items-center justify-between">
+    <nav aria-label="Progress" className="w-full pt-4 pb-4 px-8">
+      <div className="xl:flex hidden items-center w-full">
         {steps.map((title, idx) => {
           const step = idx + 1;
           const reached = step <= currentStep;
           const active = step === currentStep;
 
           return (
-            <div key={step} className="flex items-center">
+            <React.Fragment key={step}>
               <button
                 onClick={() => step < currentStep && onStepClick(step)}
                 className={
@@ -69,18 +70,17 @@ export const StepTracker: FC<StepTrackerProps> = ({
               {idx < steps.length - 1 && (
                 <div
                   className={`
-      h-[2px] rounded 
+      h-[2px] rounded flex-1 mx-4
       ${step < currentStep ? "bg-[#68FCF2]" : "bg-[#202020]"} 
-      mx-4 w-4 lg:w-24
     `}
                 />
               )}
-            </div>
+            </React.Fragment>
           );
         })}
       </div>
 
-      <div className="flex xl:hidden w-full h-1 space-x-2">
+      <div className="flex xl:hidden w-full h-2 space-x-2">
         {steps.map((_, idx) => {
           const step = idx + 1;
           const reached = step <= currentStep;

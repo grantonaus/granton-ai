@@ -92,11 +92,11 @@ export default function PersonalDetails({
 
     return (
         <div className="flex flex-col h-full">
-            <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-8 mt-2 md:mt-5">
+            <div className="flex-1 min-h-0 overflow-y-auto px-8 pt-4 pb-8 mt-2 md:mt-5">
                 <Form {...form}>
                     <form
                         onSubmit={form.handleSubmit(handleSave)}
-                        className="space-y-8 md:space-y-12 max-w-[960px] mx-auto"
+                        className="space-y-8 md:space-y-12 w-full"
                     >
                         <div className="space-y-2">
                             <p className="text-[16px] font-bold text-white mb-6">Primary Contact</p>
@@ -275,7 +275,7 @@ export default function PersonalDetails({
             </div>
 
             <div className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8">
-                <div className="max-w-[1000px] mx-auto flex justify-between gap-4 px-5">
+                <div className="w-full px-8 flex justify-between gap-4">
                     <Button
                         onClick={form.handleSubmit(handleSave)}
                         className="w-full h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer"

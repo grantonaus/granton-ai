@@ -84,48 +84,48 @@ export const CompanyDetailsIcon: React.FC<SVGIconProps> = ({
 export const PersonalDetailsIcon: React.FC<SVGIconProps> = ({
     size = 24,
     ...props
-  }) => (
+}) => (
     <svg
-      width={size}
-      height={size}
-      style={{ width: size, height: size }}
-      viewBox="0 0 24 24"
-      fill="none"
-      {...props}
+        width={size}
+        height={size}
+        style={{ width: size, height: size }}
+        viewBox="0 0 24 24"
+        fill="none"
+        {...props}
     >
-      {/* Background square at 10% opacity */}
-      <rect
-        x="1"
-        y="1"
-        width="22"
-        height="22"
-        rx="6.6"
-        fill="currentColor"
-        fillOpacity="0.1"
-      />
-  
-      {/* Head circle – now centered at x=12 */}
-      <circle
-        cx="2.28571"
-        cy="2.28571"
-        r="2.28571"
-        /* “-1 0 0 1 14.2857 6” reflects across vertical axis + shifts right so center =12 */
-        transform="matrix(-1 0 0 1 14.2857 6)"
-        fill="currentColor"
-        fillOpacity="0.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeOpacity="0.5"
-      />
-  
-      {/* 
+        {/* Background square at 10% opacity */}
+        <rect
+            x="1"
+            y="1"
+            width="22"
+            height="22"
+            rx="6.6"
+            fill="currentColor"
+            fillOpacity="0.1"
+        />
+
+        {/* Head circle – now centered at x=12 */}
+        <circle
+            cx="2.28571"
+            cy="2.28571"
+            r="2.28571"
+            /* “-1 0 0 1 14.2857 6” reflects across vertical axis + shifts right so center =12 */
+            transform="matrix(-1 0 0 1 14.2857 6)"
+            fill="currentColor"
+            fillOpacity="0.5"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeOpacity="0.5"
+        />
+
+        {/* 
         Shoulders shape:
         - original path ranged from x=7→15 (midpoint=11).
         - wrapping in translate(1 0) shifts midpoint →12.
       */}
-      <g transform="translate(1 0)">
-        <path
-          d="M7 13.9627
+        <g transform="translate(1 0)">
+            <path
+                d="M7 13.9627
              C7 13.4711 7.30906 13.0325 7.77205 12.8672
              V12.8672
              C9.85945 12.1217 12.1405 12.1217 14.2279 12.8672
@@ -139,15 +139,15 @@ export const PersonalDetailsIcon: React.FC<SVGIconProps> = ({
              C7.60097 15.9142 7 15.393 7 14.7145
              V13.9627
              Z"
-          fill="currentColor"
-          fillOpacity="0.5"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeOpacity="0.5"
-        />
-      </g>
+                fill="currentColor"
+                fillOpacity="0.5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeOpacity="0.5"
+            />
+        </g>
     </svg>
-  );
+);
 
 
 
@@ -213,35 +213,35 @@ export const PastApplicationsIcon: React.FC<SVGIconProps> = ({
 export const MatchingGrantsIcon: React.FC<SVGIconProps> = ({
     size = 24,
     ...props
-  }) => (
+}) => (
     <svg
-      width={size}
-      height={size}
-      viewBox="0 0 22 22"
-      fill="none"
-      style={{ width: size, height: size }}
-      {...props}
+        width={size}
+        height={size}
+        viewBox="0 0 22 22"
+        fill="none"
+        style={{ width: size, height: size }}
+        {...props}
     >
-      {/* Background */}
-      <rect
-        width="22"
-        height="22"
-        rx="6.6"
-        fill="currentColor"
-        fillOpacity="0.1"
-      />
-      {/* Arrow icon for matching logic */}
-      <path
-        d="M12.0077 10.2895C11.8972 10.2895 11.8077 10.2 11.8077 10.0895V7.0558C11.8077 6.86835 11.573 6.7839 11.4535 6.92837L8.17675 10.8919C7.90722 11.2179 8.13911 11.7105 8.56211 11.7105H9.99231C10.1028 11.7105 10.1923 11.8 10.1923 11.9105V14.9442C10.1923 15.1316 10.427 15.2161 10.5465 15.0716L13.8232 11.1081C14.0928 10.7821 13.8609 10.2895 13.4379 10.2895H12.0077Z"
-        fill="currentColor"
-        fillOpacity="0.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeOpacity="0.5"
-      />
+        {/* Background */}
+        <rect
+            width="22"
+            height="22"
+            rx="6.6"
+            fill="currentColor"
+            fillOpacity="0.1"
+        />
+        {/* Arrow icon for matching logic */}
+        <path
+            d="M12.0077 10.2895C11.8972 10.2895 11.8077 10.2 11.8077 10.0895V7.0558C11.8077 6.86835 11.573 6.7839 11.4535 6.92837L8.17675 10.8919C7.90722 11.2179 8.13911 11.7105 8.56211 11.7105H9.99231C10.1028 11.7105 10.1923 11.8 10.1923 11.9105V14.9442C10.1923 15.1316 10.427 15.2161 10.5465 15.0716L13.8232 11.1081C14.0928 10.7821 13.8609 10.2895 13.4379 10.2895H12.0077Z"
+            fill="currentColor"
+            fillOpacity="0.5"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeOpacity="0.5"
+        />
     </svg>
-  );
-  
+);
+
 
 
 //   <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -251,6 +251,43 @@ export const MatchingGrantsIcon: React.FC<SVGIconProps> = ({
 // </svg>
 
 
+
+// Grant Database Icon
+export const GrantDatabaseIcon: React.FC<SVGIconProps> = ({
+    size = 24,
+    ...props
+}) => (
+    <svg
+        width={size}
+        height={size}
+        style={{ width: size, height: size }}
+        viewBox="0 0 24 24"
+        fill="none"
+        {...props}
+    >
+        {/* Background square */}
+        <rect
+            x="1"
+            y="1"
+            width="22"
+            height="22"
+            rx="6.6"
+            fill="currentColor"
+            fillOpacity="0.1"
+        />
+        {/* Database icon path - scaled down and centered */}
+        <g transform="translate(12, 12) scale(0.8) translate(-12, -12)">
+            <path
+                d="M18 12V17C18 18.6569 15.3137 20 12 20C8.68629 20 6 18.6569 6 17V12M18 12V7M18 12C18 13.6569 15.3137 15 12 15C8.68629 15 6 13.6569 6 12M18 7C18 5.34315 15.3137 4 12 4C8.68629 4 6 5.34315 6 7M18 7C18 8.65685 15.3137 10 12 10C8.68629 10 6 8.65685 6 7M6 12V7"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeOpacity="0.5"
+            />
+        </g>
+    </svg>
+);
 
 // re-export lucide icons with the same API
 export { Bookmark, GalleryVertical, Plus } from "lucide-react";

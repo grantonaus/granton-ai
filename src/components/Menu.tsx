@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Ellipsis, LogOut, Plus, Sparkles } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,11 +13,21 @@ import {
   TooltipContent,
   TooltipProvider
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useEffect, useState } from "react";
 import React from 'react';
 import { getMenuList, RecentApp } from "@/constants/menuList";
 import { ExpandableLinkMenu } from "./ExpandableLinkMenu";
-import { loadStripe } from "@stripe/stripe-js";
 import { useCurrentUser } from "@/hooks/user";
 
 interface MenuProps {
@@ -24,6 +35,7 @@ interface MenuProps {
   personalIncomplete?: boolean;
   companyIncomplete?: boolean;
   isPremium: boolean;
+  onLinkClick?: () => void;
 }
 
 export function Menu({
@@ -31,6 +43,7 @@ export function Menu({
   personalIncomplete,
   companyIncomplete,
   isPremium,
+  onLinkClick,
 }: MenuProps) {
   const pathname = usePathname();
   const { session } = useCurrentUser();
@@ -70,20 +83,51 @@ export function Menu({
 
   // const [isUpgraded, setIsUpgraded] = useState(false);
 
-  const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
+  const handleUpgrade = async () => {
+    // If not logged in, save intent and redirect to login
+    if (!session?.user) {
+      sessionStorage.setItem("pendingPaymentLink", "/api/stripe/checkout");
+      sessionStorage.setItem("pendingIsAnnual", "false");
+      window.location.href = "/login";
+      return;
+    }
 
-  const handleClick = async () => {
-    const res = await fetch('/api/stripe/create-session', {
-      method: 'POST',
-    });
+    try {
+      // Call the subscription checkout API (default to monthly)
+      const response = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isAnnual: false }),
+      });
 
-    const { url } = await res.json();
-    const stripe = await stripePromise;
+      if (!response.ok) {
+        let errorMessage = "Failed to start checkout. Please try again.";
+        try {
+          const error = await response.json();
+          console.error("Failed to create checkout session:", error);
+          errorMessage = error.details || error.error || errorMessage;
+        } catch (e) {
+          const text = await response.text();
+          console.error("Failed to parse error response:", text);
+          errorMessage = text || errorMessage;
+        }
+        alert(`Error: ${errorMessage}`);
+        return;
+      }
 
-    if (!stripe || !url) return;
-
-    // Just go to the checkout session URL
-    window.location.href = url;
+      const { url } = await response.json();
+      if (url) {
+        window.location.href = url;
+      } else {
+        console.error("No checkout URL returned from API");
+        alert("Failed to get checkout URL. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      alert("An error occurred. Please try again.");
+    }
   };
 
 
@@ -91,7 +135,7 @@ export function Menu({
     <>
       {/* <ScrollArea className="overflow-visible [&>div>div]:overflow-visible"> */}
       <nav className="md:mt-7 h-full w-full overflow-visible [&>div>div]:overflow-visible">
-        <ul className="flex flex-col min-h-[calc(100vh-48px-36px-16px-60px)] lg:min-h-[calc(100vh-32px-40px-60px)] items-start space-y-1 px-2 overflow-visible [&>div>div]:overflow-visible">
+        <ul className="flex flex-col min-h-[calc(100vh-48px-36px-16px-60px)] lg:min-h-[calc(100vh-32px-40px-60px)] items-start space-y-0.5 px-2 overflow-visible [&>div>div]:overflow-visible">
           {menuList.map(({ groupLabel, menus }, index) => (
             <li className={cn("w-full", groupLabel ? "pt-5" : "")} key={index}>
               {(isOpen && groupLabel) || isOpen === undefined ? (
@@ -123,10 +167,10 @@ export function Menu({
                           <TooltipTrigger asChild>
                             <Button
                               variant={active ? "secondary" : "ghost"}
-                              className="relative w-full justify-start font-medium text-[15px] h-12 mb-1 py-0 rounded-md"
+                              className="relative w-full justify-start font-medium text-[15px] h-11 mb-1.5  py-0 rounded-md"
                               asChild
                             >
-                              <Link href={href}>
+                              <Link href={href} onClick={onLinkClick}>
 
 
 
@@ -184,6 +228,7 @@ export function Menu({
                       active={active}
                       submenus={submenus}
                       isOpen={isOpen}
+                      onLinkClick={onLinkClick}
                     />
                   )
               )}
@@ -196,21 +241,21 @@ export function Menu({
                 className="
                 relative flex flex-col w-full 
                 bg-[#151515] text-white
-                p-6 rounded-xl
+                p-4 rounded-xl
               "
               >
                 <h2 className="flex items-center font-black text-[20px] mb-2 tracking-tight">
                   <span className="leading-none">GRANTON</span>
-                  <Plus className="size-[15px]" strokeWidth={4} />
+                  <Plus className="size-[13px]" strokeWidth={4} />
                 </h2>
                 <p className="text-[15px] font-medium leading-snug mb-4 text-white/60">
-                  Thanks for being a premium member. Enjoy unlimited grant matches and priority support.
+                  You're a premium member! Enjoy unlimited AI-powered grant matches, priority support, and exclusive features.
                 </p>
                 <Button
-                  className="bg-[#1b1b1b] text-white/50 font-bold h-11 rounded-lg"
+                  className="bg-[#1b1b1b] text-white/50 font-bold h-11 rounded-lg text-[15px]"
                   disabled
                 >
-                  Upgraded
+                  Active
                 </Button>
               </div>
 
@@ -220,29 +265,69 @@ export function Menu({
                 className="
               relative flex flex-col w-full 
               bg-[#68FCF2] text-black 
-              p-6 rounded-xl
+              p-4 rounded-xl
               shadow-[0_0_20px_3px_rgba(104,252,242,0.5)]
             "
               >
                 <h2 className="flex flex-row items-center font-black text-[20px] mb-2 tracking-tight">
-                  <span className="leading-none">GRANTON</span> <Plus className="size-[15px]" strokeWidth={4} />
+                  <span className="leading-none">GRANTON</span> <Plus className="size-[13px]" strokeWidth={4} />
                 </h2>
                 <p className="text-[15px] font-medium leading-snug mb-4">
-                  Get real-time matches to grants and other funding opportunities based on your business & goals
+                  Unlock AI-powered grant discovery. Get instant matches tailored to your business profile and funding goals.
                 </p>
-                {/* <a className="w-full" href="https://buy.stripe.com/test_8x200k5l99B6b8qePA0sU00"> */}
                 <Button
-                  // onClick={handleUpgrade}
-                  // disabled={loading}
-                  onClick={handleClick}
-                  className="w-full bg-black hover:bg-black/80 text-white font-bold h-11 rounded-lg cursor-pointer">
-                  Upgrade
+                  onClick={handleUpgrade}
+                  disabled={loading}
+                  className="w-full bg-black hover:bg-black/80 text-white font-bold h-11 rounded-lg cursor-pointer text-[15px]">
+                  {loading ? "Loading..." : "Upgrade"}
                 </Button>
-                {/* </a> */}
               </div>
             )}
 
           </li>
+          {/* {session?.user && ( */}
+            <li className="w-full mt-3">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    className="w-full bg-[#1a1a1a] hover:bg-[#111111] text-white border border-white/5 font-semibold h-11 rounded-lg cursor-pointer flex items-center gap-2 justify-center transition-colors duration-200"
+                  >
+                    <LogOut size={18} />
+                    Logout
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="my-0">Confirm Logout</AlertDialogTitle>
+                    <AlertDialogDescription className="my-0">
+                      Are you sure you want to log out? This will end your session and
+                      redirect you to the login page.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="h-10 hover:bg-[#131313] hover:text-white/80 cursor-pointer">
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={async () => {
+                        try {
+                          await signOut({ 
+                            callbackUrl: "/login",
+                            redirect: true 
+                          });
+                        } catch (error) {
+                          console.error("Logout failed:", error);
+                        }
+                      }}
+                      className="h-10 bg-destructive hover:bg-destructive/80 text-white cursor-pointer"
+                    >
+                      Log out
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </li>
+          {/* )} */}
         </ul>
       </nav>
 

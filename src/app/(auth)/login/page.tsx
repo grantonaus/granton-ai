@@ -56,8 +56,6 @@ const LoginPage = () => {
         const result = await login(values);
         console.log("Login result:", result); 
 
-        router.push("/new-application")
-
         if (result?.error) {
           console.error("Login Error:", result.error);
           setError(result.error);
@@ -67,6 +65,42 @@ const LoginPage = () => {
           setSuccess("Login successful!");
           console.log("Login successful.");
 
+          // Check for pending payment
+          const pendingPaymentLink = sessionStorage.getItem("pendingPaymentLink");
+          const pendingIsAnnual = sessionStorage.getItem("pendingIsAnnual");
+          
+          if (pendingPaymentLink) {
+            sessionStorage.removeItem("pendingPaymentLink");
+            sessionStorage.removeItem("pendingIsAnnual");
+            
+            // Redirect to checkout
+            try {
+              const response = await fetch(pendingPaymentLink, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ isAnnual: pendingIsAnnual === "true" }),
+              });
+
+              if (response.ok) {
+                const { url } = await response.json();
+                if (url) {
+                  window.location.href = url;
+                  return;
+                } else {
+                  console.error("No checkout URL returned from API");
+                }
+              } else {
+                const error = await response.json().catch(() => ({ error: "Unknown error" }));
+                console.error("Failed to redirect to checkout:", error);
+              }
+            } catch (error) {
+              console.error("Error redirecting to checkout:", error);
+            }
+          }
+
+          router.push("/new-application");
         }
       } catch (err) {
         console.error("Unexpected Error:", err);

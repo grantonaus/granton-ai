@@ -213,6 +213,7 @@ export async function GET(req: NextRequest) {
         companyName: true,
         websiteUrl: true,
         country: true,
+        state: true,
         companyBackground: true,
         product: true,
         competitorsUniqueValueProposition: true,
@@ -234,6 +235,7 @@ export async function GET(req: NextRequest) {
         company_name: record.companyName ?? "",
         website_url: record.websiteUrl ?? "",
         country: record.country ?? "",
+        state: record.state ?? "",
         company_background: record.companyBackground ?? "",
         product: record.product ?? "",
         competitors_unique_value_proposition:
@@ -305,6 +307,7 @@ export async function POST(req: NextRequest) {
         companyName: data.company_name,
         websiteUrl: data.website_url,
         country: data.country,
+        state: data.state || null,
         companyBackground: data.company_background,
         product: data.product,
         competitorsUniqueValueProposition:

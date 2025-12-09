@@ -46,8 +46,6 @@ function generatePdf(doc: jsPDF, text: string) {
 }
 
 export default function Finalise({ applicationText, applicationTitle }: FinaliseProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [availableHeight, setAvailableHeight] = useState(0);
   const { session } = useCurrentUser();
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -137,29 +135,6 @@ export default function Finalise({ applicationText, applicationTitle }: Finalise
     })();
   }, [applicationText, applicationTitle, session]);
 
-  useEffect(() => {
-    function calculateHeight() {
-      const navbarElem = document.getElementById("navbar");
-      const footerElem = document.getElementById("footer");
-      const navbarHeight = navbarElem ? navbarElem.getBoundingClientRect().height : 0;
-      const footerHeight = footerElem ? footerElem.getBoundingClientRect().height : 0;
-      const extraPaddingTop = 16;
-      const extraPaddingBottom = 16;
-
-      const newAvailableHeight =
-        window.innerHeight -
-        navbarHeight -
-        footerHeight -
-        extraPaddingTop -
-        extraPaddingBottom;
-
-      setAvailableHeight(newAvailableHeight);
-    }
-
-    calculateHeight();
-    window.addEventListener("resize", calculateHeight);
-    return () => window.removeEventListener("resize", calculateHeight);
-  }, []);
 
   const saveAsPdf = () => {
     const doc = new jsPDF("p", "pt", "a4");
@@ -168,63 +143,96 @@ export default function Finalise({ applicationText, applicationTitle }: Finalise
   };
 
   return (
-    <div className="flex flex-col h-full max-w-[960px] mx-auto w-full">
+    <div className="flex flex-col h-[calc(100vh-200px)] max-w-[1200px] mx-auto w-full">
       <div
-        ref={containerRef}
-        className="flex flex-col w-full rounded-md border border-border bg-[#0E0E0E] overflow-hidden"
-        style={{ height: availableHeight }}
+        className="flex flex-col flex-1 w-full rounded-md border border-border bg-[#0E0E0E] overflow-hidden min-h-0"
       >
         <div className="flex-shrink-0 flex items-center px-4 py-3 border-b border-[#1C1C1C]">
           <p className="text-[15px] font-bold text-white">Application Content</p>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 text-[15px] text-white tracking-normal">
-          {/* <pre className="whitespace-pre-wrap">{applicationText}</pre> */}
+        <div className="flex-1 overflow-y-auto p-4 text-[15px] text-white tracking-normal min-h-0">
           {isPaid ? (
-            // 2️⃣ Paid users see it all
             <pre className="whitespace-pre-wrap">{applicationText}</pre>
           ) : (
             <>
-              {/* 3️⃣ First N paragraphs normal */}
               <div className="relative">
                 <pre className="whitespace-pre-wrap">{previewParas}</pre>
-                <div className="mt-4 mb-2 py-2 text-[15px] rounded-md bg-[#191C1C] font-medium text-center text-[#68FCF2]">
-                  Upgrade to view the full application
+                <div className="mt-4 mb-2 py-3 px-4 text-[15px] rounded-md bg-[#191C1C] border border-[#68FCF2]/30 font-medium text-center text-[#68FCF2]">
+                  <p className="mb-1">🔒 Upgrade to view the full application</p>
                 </div>
               </div>
 
               {restParas && (
                 <div className="relative mt-4">
-                  {/* blurred remainder */}
                   <pre
                     className="whitespace-pre-wrap filter blur-sm select-none pointer-events-none"
                     style={{ lineHeight: "1.5" }}
                   >
                     {restParas}
                   </pre>
-
-                  {/* fade-out gradient at bottom */}
                   <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-[#0E0E0E] pointer-events-none">
                   </div>
                 </div>
               )}
-
-              {/* <div className="mt-6 font-semibold text-center text-white/50">
-                Upgrade to view the full application
-              </div> */}
             </>
           )}
         </div>
       </div>
 
-      <div className="flex-shrink-0 pt-2 pb-8">
+      <div className="flex-shrink-0 pt-4 pb-8">
+        {!isPaid && (
+          <div className="mb-3 p-3 rounded-md bg-[#1A1A1A] border border-[#2A2A2A]">
+            <p className="text-sm text-gray-400 text-center mb-2">
+              💳 Subscription required to save applications
+            </p>
+            <Button
+              type="button"
+              className="w-full h-9 font-semibold bg-[#68FCF2] hover:bg-[#68FCF2]/80 text-black"
+              onClick={async () => {
+                try {
+                  const res = await fetch("/api/stripe/checkout", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ isAnnual: false }),
+                  });
+                  if (res.ok) {
+                    const { url } = await res.json();
+                    if (url) {
+                      window.location.href = url;
+                    } else {
+                      alert("Failed to get checkout URL. Please try again.");
+                    }
+                  } else {
+                    let errorMessage = "Failed to start checkout. Please try again.";
+                    try {
+                      const error = await res.json();
+                      errorMessage = error.details || error.error || errorMessage;
+                    } catch (e) {
+                      const text = await res.text();
+                      errorMessage = text || errorMessage;
+                    }
+                    alert(`Error: ${errorMessage}`);
+                  }
+                } catch (error) {
+                  console.error("Error starting checkout:", error);
+                  alert("An error occurred. Please try again.");
+                }
+              }}
+            >
+              Subscribe Now
+            </Button>
+          </div>
+        )}
         <Button
           type="button"
           disabled={!isPaid}
-          className="w-full h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer disabled:bg-[#282828] disabled:text-[#626262]"
+          className="w-full h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer disabled:bg-[#282828] disabled:text-[#626262] disabled:cursor-not-allowed"
           onClick={saveAsPdf}
         >
-          Save as PDF
+          {isPaid ? "Save as PDF" : "Save as PDF (Requires Subscription)"}
         </Button>
       </div>
     </div>

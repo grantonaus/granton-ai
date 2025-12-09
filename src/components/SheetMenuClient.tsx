@@ -3,10 +3,11 @@
 
 import Link from "next/link";
 import { MenuIcon } from "lucide-react";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTrigger } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { Menu } from "./Menu";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { useState } from "react";
 
 interface SheetMenuClientProps {
   profileComplete: boolean;
@@ -17,8 +18,10 @@ export default function SheetMenuClient({
   profileComplete,
   isPremium,
 }: SheetMenuClientProps) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <Drawer>
+    <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger className="lg:hidden" asChild>
         <Button variant="outline" size="icon">
           <MenuIcon size={20} />
@@ -27,6 +30,7 @@ export default function SheetMenuClient({
 
       <DrawerContent className="px-3 pb-5">
         <DrawerHeader>
+          <DrawerTitle className="sr-only">Navigation Menu</DrawerTitle>
           <Link href="/home">
             <Image src="/logo.png" alt="logo" width={114} height={53} />
           </Link>
@@ -36,6 +40,7 @@ export default function SheetMenuClient({
           isOpen={true}
           personalIncomplete={!profileComplete}
           isPremium={isPremium}
+          onLinkClick={() => setOpen(false)}
         />
       </DrawerContent>
     </Drawer>

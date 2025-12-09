@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { PersonalProvider } from "@/contexts/PersonalContext";
 import { client } from "@/lib/prisma";
 import { auth } from "../../../auth";
+import { DynamicNavbar } from "@/components/DynamicNavbar";
 
 type ExploreLayoutProps = {
   children: React.ReactNode;
@@ -31,10 +32,14 @@ export default async function ExploreLayout({ children }: ExploreLayoutProps) {
       <Sidebar/>
       <main
         className={cn(
-          "h-[100dvh] bg-zinc-50 dark:bg-black transition-[margin-left] ease-in-out duration-300 lg:ml-80"
+          "h-[100dvh] bg-zinc-50 dark:bg-black transition-[margin-left] ease-in-out duration-300 lg:ml-80 flex flex-col"
         )}
+        style={{ resize: 'none' }}
       >
-        {children}
+        <DynamicNavbar />
+        <div className="flex-1 overflow-auto">
+          {children}
+        </div>
       </main>
     </PersonalProvider>
   );
