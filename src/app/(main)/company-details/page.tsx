@@ -3,6 +3,8 @@ import { getCompanyDetails } from "@/app/actions/company-details";
 import CompanyDetailsClient from "./CompanyDetailsClient";
 import Spinner from "@/components/Spinner";
 
+export const dynamic = 'force-dynamic';
+
 async function CompanyDetailsContent() {
   const data = await getCompanyDetails();
 

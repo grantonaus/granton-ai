@@ -3,6 +3,8 @@ import { getGrantDatabase } from "@/app/actions/grant-database";
 import GrantDatabaseClient from "./GrantDatabaseClient";
 import Spinner from "@/components/Spinner";
 
+export const dynamic = 'force-dynamic';
+
 async function GrantDatabaseContent() {
   const data = await getGrantDatabase();
 

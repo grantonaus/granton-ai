@@ -3,6 +3,8 @@ import { getPastApplications } from "@/app/actions/past-applications";
 import PastApplicationsClient from "./PastApplicationsClient";
 import Spinner from "@/components/Spinner";
 
+export const dynamic = 'force-dynamic';
+
 async function PastApplicationsContent() {
   const applications = await getPastApplications();
 

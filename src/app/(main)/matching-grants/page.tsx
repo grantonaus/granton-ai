@@ -3,6 +3,8 @@ import { getMatchingGrants } from "@/app/actions/matching-grants";
 import MatchingGrantsClient from "./MatchingGrantsClient";
 import Spinner from "@/components/Spinner";
 
+export const dynamic = 'force-dynamic';
+
 async function MatchingGrantsContent() {
   const data = await getMatchingGrants();
 
