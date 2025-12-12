@@ -3,6 +3,8 @@ import { getPersonalDetails } from "@/app/actions/personal-details-fetch";
 import PersonalDetailsClient from "./PersonalDetailsClient";
 import Spinner from "@/components/Spinner";
 
+export const dynamic = 'force-dynamic';
+
 async function PersonalDetailsContent() {
   const data = await getPersonalDetails();
 
