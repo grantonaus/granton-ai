@@ -6,6 +6,8 @@ import { client } from "@/lib/prisma";
 import { auth } from "../../../auth";
 import { DynamicNavbar } from "@/components/DynamicNavbar";
 
+export const dynamic = 'force-dynamic';
+
 type ExploreLayoutProps = {
   children: React.ReactNode;
 };
