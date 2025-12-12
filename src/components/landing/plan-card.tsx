@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import React from "react";
-import { ChevronsRight } from "lucide-react";
+import React, { useState } from "react";
+import { ChevronsRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useSession, getSession } from "next-auth/react";
 
 interface PlanCardProps {
   title: string;
@@ -16,6 +15,7 @@ interface PlanCardProps {
   href: string;
   paymentLink?: string;
   isAnnual: boolean;
+  isSubscribed?: boolean;
 
   /** shape style: "free-left" | "pro-right" | "default" */
   shape?: "free-left" | "pro-right" | "default";
@@ -31,10 +31,11 @@ const PlanCard: React.FC<PlanCardProps> = ({
   href,
   paymentLink,
   isAnnual,
+  isSubscribed = false,
   shape = "default",
 }) => {
   const router = useRouter();
-  const session = useSession();
+  const [isLoading, setIsLoading] = useState(false);
   const isFreePlan = monthlyPrice === 0;
 
   const monthlyEquivalent = (annualPrice / 12).toFixed(2);
@@ -46,65 +47,6 @@ const PlanCard: React.FC<PlanCardProps> = ({
     "pro-right": "rounded-3xl",
   }[shape];
 
-  const handleSubscription = async () => {
-    if (!paymentLink) return;
-
-    // Get fresh session to ensure we have the latest auth state
-    const currentSession = await getSession();
-
-    // Check if user is authenticated - redirect to login if not
-    if (!currentSession?.user?.id) {
-      sessionStorage.setItem("pendingPaymentLink", paymentLink);
-      sessionStorage.setItem("pendingIsAnnual", String(isAnnual));
-      router.push("/login");
-      return;
-    }
-
-    try {
-      // Call the subscription checkout API
-      const response = await fetch(paymentLink, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ isAnnual }),
-      });
-
-      // Handle 401 Unauthorized - redirect to login
-      if (response.status === 401) {
-        sessionStorage.setItem("pendingPaymentLink", paymentLink);
-        sessionStorage.setItem("pendingIsAnnual", String(isAnnual));
-        router.push("/login");
-        return;
-      }
-
-      if (!response.ok) {
-        let errorMessage = "Failed to start checkout. Please try again.";
-        try {
-          const error = await response.json();
-          console.error("Failed to create checkout session:", error);
-          errorMessage = error.details || error.error || errorMessage;
-        } catch (e) {
-          const text = await response.text();
-          console.error("Failed to parse error response:", text);
-          errorMessage = text || errorMessage;
-        }
-        alert(`Error: ${errorMessage}`);
-        return;
-      }
-
-      const { url } = await response.json();
-      if (url) {
-        window.location.href = url;
-      } else {
-        console.error("No checkout URL returned from API");
-        alert("Failed to get checkout URL. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error creating checkout session:", error);
-      alert("An error occurred. Please try again.");
-    }
-  };
 
   return (
     <div
@@ -188,9 +130,61 @@ const PlanCard: React.FC<PlanCardProps> = ({
           >
             Current Plan
           </button>
-        ) : (
+        ) : paymentLink ? (
           <button
-            onClick={handleSubscription}
+            onClick={async () => {
+              setIsLoading(true);
+              
+              // If user is already subscribed, redirect to new-application
+              if (isSubscribed) {
+                router.push('/new-application');
+                return;
+              }
+
+              try {
+                // User is not subscribed, proceed with checkout
+                const response = await fetch('/api/subscribe', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ isAnnual }),
+                });
+                const data = await response.json();
+                if (data.url) {
+                  window.location.href = data.url;
+                } else {
+                  console.error('No checkout URL received');
+                  setIsLoading(false);
+                }
+              } catch (error) {
+                console.error('Error creating checkout:', error);
+                setIsLoading(false);
+              }
+            }}
+            disabled={isLoading}
+            className="
+            cursor-pointer
+            mt-4 h-12 w-full rounded-xl font-semibold
+            bg-[#77F7CF] text-black hover:bg-[#77F7CF]/70
+            transition-all duration-300
+            shadow-[0_0_25px_rgba(119,247,207,0.5)]
+            flex items-center justify-center gap-2
+            disabled:opacity-50 disabled:cursor-not-allowed
+          "
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="size-5 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                Get Started <ChevronsRight className="size-5" />
+              </>
+            )}
+          </button>
+        ) : (
+          <Link
+            href={href}
             className="
             cursor-pointer
             mt-4 h-12 w-full rounded-xl font-semibold
@@ -200,8 +194,8 @@ const PlanCard: React.FC<PlanCardProps> = ({
             flex items-center justify-center gap-2
           "
           >
-            Subscribe <ChevronsRight className="size-5" />
-          </button>
+            Get Started <ChevronsRight className="size-5" />
+          </Link>
         )}
       </div>
     </div>

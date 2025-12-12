@@ -75,6 +75,7 @@ export const FileUploader = forwardRef<
     const [isFileTooBig, setIsFileTooBig] = useState(false)
     const [isLOF, setIsLOF] = useState(false)
     const [activeIndex, setActiveIndex] = useState(-1)
+    const inputRef = useRef<HTMLInputElement>(null)
     const {
       accept = {
         'image/*': ['.jpg', '.jpeg', '.png', '.gif'],
@@ -133,7 +134,7 @@ export const FileUploader = forwardRef<
           movePrev()
         } else if (e.key === 'Enter' || e.key === 'Space') {
           if (activeIndex === -1) {
-            dropzoneState.inputRef.current?.click()
+            inputRef.current?.click()
           }
         } else if (e.key === 'Delete' || e.key === 'Backspace') {
           if (activeIndex !== -1) {
@@ -148,7 +149,7 @@ export const FileUploader = forwardRef<
           setActiveIndex(-1)
         }
       },
-      [value, activeIndex, removeFileFromSet],
+      [value, activeIndex, removeFileFromSet, orientation, direction],
     )
 
     const onDrop = useCallback(
@@ -189,7 +190,7 @@ export const FileUploader = forwardRef<
           }
         }
       },
-      [reSelectAll, value],
+      [reSelectAll, value, maxFiles, maxSize, onValueChange],
     )
 
     useEffect(() => {
@@ -211,6 +212,13 @@ export const FileUploader = forwardRef<
       onDropRejected: () => setIsFileTooBig(true),
       onDropAccepted: () => setIsFileTooBig(false),
     })
+
+    // Sync inputRef with dropzoneState.inputRef
+    useEffect(() => {
+      if (dropzoneState.inputRef.current && inputRef.current !== dropzoneState.inputRef.current) {
+        inputRef.current = dropzoneState.inputRef.current
+      }
+    }, [dropzoneState])
 
     return (
       <FileUploaderContext.Provider

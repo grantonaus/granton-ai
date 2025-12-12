@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Ellipsis, LogOut, Plus, Sparkles } from "lucide-react";
+import { Ellipsis, LogOut, Plus } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 
@@ -34,25 +34,24 @@ interface MenuProps {
   isOpen: boolean | undefined;
   personalIncomplete?: boolean;
   companyIncomplete?: boolean;
-  isPremium: boolean;
   onLinkClick?: () => void;
+  isSubscribed?: boolean;
 }
 
 export function Menu({
   isOpen,
   personalIncomplete,
   companyIncomplete,
-  isPremium,
   onLinkClick,
+  isSubscribed = false,
 }: MenuProps) {
   const pathname = usePathname();
   const { session } = useCurrentUser();
 
 
-  const [loading, setLoading] = useState(false);
-
   const [recentApps, setRecentApps] = useState<RecentApp[]>([]);
   const [loadingApps, setLoadingApps] = useState(true);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
 
   useEffect(() => {
     async function loadRecentApps() {
@@ -79,56 +78,6 @@ export function Menu({
   }, [session?.user?.id]);
 
   const menuList = getMenuList(pathname, recentApps);
-
-
-  // const [isUpgraded, setIsUpgraded] = useState(false);
-
-  const handleUpgrade = async () => {
-    // If not logged in, save intent and redirect to login
-    if (!session?.user) {
-      sessionStorage.setItem("pendingPaymentLink", "/api/stripe/checkout");
-      sessionStorage.setItem("pendingIsAnnual", "false");
-      window.location.href = "/login";
-      return;
-    }
-
-    try {
-      // Call the subscription checkout API (default to monthly)
-      const response = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ isAnnual: false }),
-      });
-
-      if (!response.ok) {
-        let errorMessage = "Failed to start checkout. Please try again.";
-        try {
-          const error = await response.json();
-          console.error("Failed to create checkout session:", error);
-          errorMessage = error.details || error.error || errorMessage;
-        } catch (e) {
-          const text = await response.text();
-          console.error("Failed to parse error response:", text);
-          errorMessage = text || errorMessage;
-        }
-        alert(`Error: ${errorMessage}`);
-        return;
-      }
-
-      const { url } = await response.json();
-      if (url) {
-        window.location.href = url;
-      } else {
-        console.error("No checkout URL returned from API");
-        alert("Failed to get checkout URL. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error creating checkout session:", error);
-      alert("An error occurred. Please try again.");
-    }
-  };
 
 
   return (
@@ -235,21 +184,16 @@ export function Menu({
             </li>
           ))}
           <li className="w-full grow flex items-end overflow-visible [&>div>div]:overflow-visible">
-
-            {isPremium ? (
+            {isSubscribed ? (
               <div
-                className="
-                relative flex flex-col w-full 
-                bg-[#151515] text-white
-                p-4 rounded-xl
-              "
+                className="relative flex flex-col w-full bg-[#151515] text-white p-4 rounded-xl"
               >
                 <h2 className="flex items-center font-black text-[20px] mb-2 tracking-tight">
                   <span className="leading-none">GRANTON</span>
                   <Plus className="size-[13px]" strokeWidth={4} />
                 </h2>
                 <p className="text-[15px] font-medium leading-snug mb-4 text-white/60">
-                  You're a premium member! Enjoy unlimited AI-powered grant matches, priority support, and exclusive features.
+                  You&apos;re a premium member! Enjoy unlimited AI-powered grant matches, priority support, and exclusive features.
                 </p>
                 <Button
                   className="bg-[#1b1b1b] text-white/50 font-bold h-11 rounded-lg text-[15px]"
@@ -258,16 +202,9 @@ export function Menu({
                   Active
                 </Button>
               </div>
-
             ) : (
-              // ─── User is not upgraded: teal background + shadow, active "Upgrade" button
               <div
-                className="
-              relative flex flex-col w-full 
-              bg-[#68FCF2] text-black 
-              p-4 rounded-xl
-              shadow-[0_0_20px_3px_rgba(104,252,242,0.5)]
-            "
+                className="relative flex flex-col w-full bg-[#68FCF2] text-black p-4 rounded-xl shadow-[0_0_20px_3px_rgba(104,252,242,0.5)]"
               >
                 <h2 className="flex flex-row items-center font-black text-[20px] mb-2 tracking-tight">
                   <span className="leading-none">GRANTON</span> <Plus className="size-[13px]" strokeWidth={4} />
@@ -276,57 +213,76 @@ export function Menu({
                   Unlock AI-powered grant discovery. Get instant matches tailored to your business profile and funding goals.
                 </p>
                 <Button
-                  onClick={handleUpgrade}
-                  disabled={loading}
-                  className="w-full bg-black hover:bg-black/80 text-white font-bold h-11 rounded-lg cursor-pointer text-[15px]">
-                  {loading ? "Loading..." : "Upgrade"}
+                  onClick={async () => {
+                    try {
+                      setUpgradeLoading(true);
+                      const response = await fetch('/api/subscribe', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ isAnnual: false }),
+                      });
+                      const data = await response.json();
+                      if (data.url) {
+                        window.location.href = data.url;
+                      } else {
+                        console.error('No checkout URL received');
+                      }
+                    } catch (error) {
+                      console.error('Error creating checkout:', error);
+                    } finally {
+                      setUpgradeLoading(false);
+                    }
+                  }}
+                  disabled={upgradeLoading}
+                  className="w-full bg-black hover:bg-black/80 text-white font-bold h-11 rounded-lg cursor-pointer text-[15px]"
+                >
+                  {upgradeLoading ? "Loading..." : "Upgrade"}
                 </Button>
               </div>
             )}
-
           </li>
           {/* {session?.user && ( */}
-            <li className="w-full mt-3">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    className="w-full bg-[#1a1a1a] hover:bg-[#111111] text-white border border-white/5 font-semibold h-11 rounded-lg cursor-pointer flex items-center gap-2 justify-center transition-colors duration-200"
+          <li className="w-full mt-3">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  className="w-full bg-[#1a1a1a] hover:bg-[#111111] text-white border border-white/5 font-semibold h-11 rounded-lg cursor-pointer flex items-center gap-2 justify-center transition-colors duration-200"
+                >
+                  <LogOut size={18} />
+                  Logout
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="my-0">Confirm Logout</AlertDialogTitle>
+                  <AlertDialogDescription className="my-0">
+                    Are you sure you want to log out? This will end your session and
+                    redirect you to the login page.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="h-10 hover:bg-[#131313] hover:text-white/80 cursor-pointer">
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      try {
+                        await signOut({
+                          callbackUrl: "/login",
+                          redirect: true
+                        });
+                      } catch (error) {
+                        console.error("Logout failed:", error);
+                      }
+                    }}
+                    className="h-10 bg-destructive hover:bg-destructive/80 text-white cursor-pointer"
                   >
-                    <LogOut size={18} />
-                    Logout
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className="my-0">Confirm Logout</AlertDialogTitle>
-                    <AlertDialogDescription className="my-0">
-                      Are you sure you want to log out? This will end your session and
-                      redirect you to the login page.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel className="h-10 hover:bg-[#131313] hover:text-white/80 cursor-pointer">
-                      Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={async () => {
-                        try {
-                          await signOut({ 
-                            callbackUrl: "/login",
-                            redirect: true 
-                          });
-                        } catch (error) {
-                          console.error("Logout failed:", error);
-                        }
-                      }}
-                      className="h-10 bg-destructive hover:bg-destructive/80 text-white cursor-pointer"
-                    >
-                      Log out
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </li>
+                    Log out
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </li>
           {/* )} */}
         </ul>
       </nav>

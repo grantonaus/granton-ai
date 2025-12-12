@@ -48,7 +48,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
             setNewFiles(filtered);
             onFileChange(filtered);
         }
-    }, [existingFiles]);
+    }, [existingFiles, newFiles, onFileChange]);
 
 
 

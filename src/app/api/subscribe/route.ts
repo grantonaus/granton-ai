@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { auth } from '../../../../../auth';
+import { auth } from '../../../../auth';
 import { client } from '@/lib/prisma';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -8,18 +8,17 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 /**
- * POST /api/stripe/checkout
+ * POST /api/subscribe
  * Create a Stripe checkout session for subscription
  */
 export async function POST(req: NextRequest) {
   try {
-    // Check authentication
-    const userSession = await auth();
-    if (!userSession?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = userSession.user.id;
+    const userId = session.user.id;
     const body = await req.json().catch(() => ({}));
     const isAnnual = body.isAnnual === true;
 
@@ -31,26 +30,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (user?.stripeCustomerId) {
-      // Verify customer exists in Stripe, create new one if missing
-      try {
-        await stripe.customers.retrieve(user.stripeCustomerId);
-        customerId = user.stripeCustomerId;
-      } catch {
-        // Customer doesn't exist, create new one
-        const customer = await stripe.customers.create({
-          email: user.email || userSession.user.email || undefined,
-          metadata: { userId },
-        });
-        customerId = customer.id;
-        await client.user.update({
-          where: { id: userId },
-          data: { stripeCustomerId: customerId },
-        });
-      }
+      customerId = user.stripeCustomerId;
     } else {
-      // Create new Stripe customer
       const customer = await stripe.customers.create({
-        email: user?.email || userSession.user.email || undefined,
+        email: user?.email || session.user.email || undefined,
         metadata: { userId },
       });
       customerId = customer.id;
@@ -67,10 +50,7 @@ export async function POST(req: NextRequest) {
 
     if (!priceId) {
       return NextResponse.json(
-        { 
-          error: "Subscription pricing not configured", 
-          details: `Missing ${isAnnual ? 'STRIPE_ANNUAL_PRICE_ID' : 'STRIPE_MONTHLY_PRICE_ID'}` 
-        },
+        { error: 'Pricing not configured' },
         { status: 500 }
       );
     }
@@ -79,7 +59,7 @@ export async function POST(req: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
     // Create checkout session
-    const session = await stripe.checkout.sessions.create({
+    const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
       payment_method_types: ['card'],
@@ -88,28 +68,26 @@ export async function POST(req: NextRequest) {
       cancel_url: `${baseUrl}/?subscription=canceled`,
       metadata: {
         userId,
-        planType: isAnnual ? 'annual' : 'monthly',
       },
       subscription_data: {
         metadata: {
           userId,
-          planType: isAnnual ? 'annual' : 'monthly',
         },
       },
     });
 
-    if (!session.url) {
+    if (!checkoutSession.url) {
       return NextResponse.json(
-        { error: "Checkout session error", details: "No checkout URL returned" },
+        { error: 'Failed to create checkout session' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ url: session.url });
-  } catch (err: any) {
-    console.error("Error creating checkout session:", err);
+    return NextResponse.json({ url: checkoutSession.url });
+  } catch (error: any) {
+    console.error('Error creating checkout:', error);
     return NextResponse.json(
-      { error: "Failed to create checkout session", details: err.message || "Unknown error" },
+      { error: 'Failed to create checkout session', details: error.message },
       { status: 500 }
     );
   }

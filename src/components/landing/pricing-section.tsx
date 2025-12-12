@@ -6,7 +6,13 @@ import PlanCard from "./plan-card";
 import SwitchToggle from "./switch-toggle";
 
 
-export default function PricingSection({ isAnnual: initialIsAnnual = false }: { isAnnual?: boolean }) {
+export default function PricingSection({ 
+  isAnnual: initialIsAnnual = false,
+  isSubscribed = false 
+}: { 
+  isAnnual?: boolean;
+  isSubscribed?: boolean;
+}) {
   const [isAnnual, setIsAnnual] = useState(initialIsAnnual);
   const plans = [
     {
@@ -155,6 +161,7 @@ export default function PricingSection({ isAnnual: initialIsAnnual = false }: { 
               "Priority email support",
             ]}
             isAnnual={isAnnual}
+            isSubscribed={isSubscribed}
             highlight
             shape="pro-right"
           />

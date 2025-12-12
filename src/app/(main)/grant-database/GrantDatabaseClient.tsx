@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -18,8 +17,7 @@ import type {
   GrantDatabaseData,
   Grant,
 } from "@/app/actions/grant-database";
-import { getSession } from "next-auth/react";
-import { useCurrentUser } from "@/hooks/user";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 interface GrantDatabaseClientProps {
@@ -29,9 +27,6 @@ interface GrantDatabaseClientProps {
 export default function GrantDatabaseClient({
   initialData,
 }: GrantDatabaseClientProps) {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const { session } = useCurrentUser();
 
   const [tab, setTab] = useState("available");
   const [grants, setGrants] = useState<Grant[]>(initialData.grants);
@@ -40,73 +35,26 @@ export default function GrantDatabaseClient({
   const [pendingSaves, setPendingSaves] = useState<Set<string>>(new Set());
   const saveAbortControllers = useRef<Map<string, AbortController>>(new Map());
   const [isNavigating, setIsNavigating] = useState(false);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [stateFilter, setStateFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // Handle subscription success
-  useEffect(() => {
-    const subscriptionSuccess = searchParams.get("subscription");
-    if (subscriptionSuccess === "success") {
-      setShowSuccessMessage(true);
-      toast.success("Payment successful! Activating your subscription...", {
-        duration: 5000,
-      });
-      
-      // Remove query param from URL
-      router.replace("/grant-database", { scroll: false });
-      
-      // Poll for subscription status update (webhook might be delayed)
-      let pollCount = 0;
-      const maxPolls = 15; // 30 seconds total (15 * 2 seconds)
-      
-      const pollInterval = setInterval(async () => {
-        pollCount++;
-        try {
-          // Refresh session to get updated subscription status
-          const updatedSession = await getSession();
-          
-          // Check subscription status via API
-          const response = await fetch("/api/stripe/subscription");
-          if (response.ok) {
-            const data = await response.json();
-            if (data.hasActiveSubscription || updatedSession?.user?.hasPaid) {
-              clearInterval(pollInterval);
-              setShowSuccessMessage(false);
-              toast.success("Subscription activated! Welcome to Pro!", {
-                duration: 4000,
-              });
-              // Force page refresh to update UI
-              setTimeout(() => {
-                window.location.reload();
-              }, 1000);
-              return;
-            }
-          }
-          
-          // If we've polled max times, stop and refresh
-          if (pollCount >= maxPolls) {
-            clearInterval(pollInterval);
-            setShowSuccessMessage(false);
-            toast.info("Subscription is being processed. Please refresh the page in a moment.", {
-              duration: 5000,
-            });
-            router.refresh();
-          }
-        } catch (error) {
-          console.error("Error checking subscription status:", error);
-          if (pollCount >= maxPolls) {
-            clearInterval(pollInterval);
-            setShowSuccessMessage(false);
-          }
-        }
-      }, 2000); // Poll every 2 seconds
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-      return () => {
-        clearInterval(pollInterval);
-      };
+  // Show toast on successful subscription
+  useEffect(() => {
+    const subscriptionStatus = searchParams.get("subscription");
+    if (subscriptionStatus === "success") {
+      toast.success("Subscription successful! Welcome to Granton AI Premium.");
+      // Clean up the URL parameter
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+      newSearchParams.delete("subscription");
+      const newUrl = newSearchParams.toString()
+        ? `${window.location.pathname}?${newSearchParams.toString()}`
+        : window.location.pathname;
+      router.replace(newUrl, { scroll: false });
     }
   }, [searchParams, router]);
 
@@ -210,26 +158,6 @@ export default function GrantDatabaseClient({
 
   return (
     <div className="w-full min-h-full bg-[#0F0F0F] overscroll-none mt-0">
-      {/* Success Message */}
-      {/* {showSuccessMessage && (
-        <div className="sticky top-0 z-40 bg-[#0d0d0d] px-5 py-4">
-          <div className="w-full mx-auto max-w-[1200px] bg-[#143735] text-[#77F7CF] rounded-md px-6 py-3 flex items-center justify-between transition-colors duration-150 ease-in-out">
-            <div className="flex items-center gap-3 w-full">
-              <span className="text-sm font-bold">
-                Payment successful! Your subscription is being activated. This may take a few seconds...
-              </span>
-            </div>
-            <button
-              onClick={() => setShowSuccessMessage(false)}
-              className="text-[#77F7CF]/60 hover:text-[#77F7CF] transition-colors ml-4 flex-shrink-0"
-              aria-label="Close"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )} */}
-
       <Tabs value={tab} onValueChange={setTab} className="w-full">
         {/* Tabs + Filters */}
         <div className="sticky top-0 z-30 bg-[#0d0d0d] pt-0 pb-4 lg:pt-4 px-5 overscroll-none">
@@ -321,7 +249,7 @@ export default function GrantDatabaseClient({
 
         <TabsContent value="saved" className="mt-4 px-5 pt-2 lg:pt-4">
           {saved.length === 0 ? (
-            <p className="text-muted-foreground">You haven't saved anything yet.</p>
+            <p className="text-muted-foreground">You haven&apos;t saved anything yet.</p>
           ) : (
             <div className="flex flex-col gap-3 pb-8">
               {grants

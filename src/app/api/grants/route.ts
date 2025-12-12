@@ -1,24 +1,20 @@
 import { NextResponse } from "next/server";
 import { client } from "@/lib/prisma";
 import { auth } from "../../../../auth";
-import { hasActiveSubscription } from "@/lib/subscription";
 
 export async function GET() {
   const session = await auth();
   const user = session?.user;
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-  // Check subscription status directly from database (not from session cache)
-  const hasActive = await hasActiveSubscription(user.id);
-  
-  if (!hasActive) {
-    return NextResponse.json({ error: "Not subscribed" }, { status: 403 });
-  }
-
   const dbUser = await client.user.findUnique({
     where: { id: user.id },
     select: { companyName: true },
   });
+
+  if (!dbUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
 
   const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY!;
   const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID!;

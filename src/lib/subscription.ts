@@ -2,38 +2,34 @@ import { client } from "@/lib/prisma";
 
 /**
  * Check if a user has an active subscription
- * A subscription is active if:
- * - hasPaid is true
- * - Status is 'active' or 'trialing'
- * - Not expired (subscriptionEndsAt is in the future)
- * - Not set to cancel at period end (cancelAtPeriodEnd is false)
  */
 export async function hasActiveSubscription(userId: string): Promise<boolean> {
   try {
-    const user = await client.user.findUnique({
-      where: { id: userId },
-      select: {
-        hasPaid: true,
-        subscriptionStatus: true,
-        subscriptionEndsAt: true,
-        cancelAtPeriodEnd: true,
-      },
+    // Check if subscription model exists (in case migration hasn't been run)
+    if (!client.subscription) {
+      console.warn('Subscription model not available in Prisma client. Make sure to run database migrations.');
+      return false;
+    }
+
+    const subscription = await client.subscription.findUnique({
+      where: { userId },
     });
 
-    if (!user) return false;
+    if (!subscription) return false;
 
     // Check if subscription is active
-    const isActiveStatus = ['active', 'trialing'].includes(user.subscriptionStatus || '');
+    const isActive = subscription.status === 'ACTIVE' || subscription.status === 'TRIALING';
     
     // Check if subscription hasn't expired
-    const isNotExpired = !user.subscriptionEndsAt || user.subscriptionEndsAt > new Date();
+    const isNotExpired = subscription.endDate > new Date();
 
-    // Check if not set to cancel at period end
-    const notCanceling = !user.cancelAtPeriodEnd;
-
-    // User must have hasPaid = true, active status, not expired, and not canceling
-    return user.hasPaid === true && isActiveStatus && isNotExpired && notCanceling;
-  } catch (error) {
+    return isActive && isNotExpired;
+  } catch (error: any) {
+    // Handle case where table doesn't exist yet
+    if (error?.code === 'P2021' || error?.code === '42P01') {
+      console.warn('Subscription table does not exist. Please run database migrations.');
+      return false;
+    }
     console.error('Error checking subscription status:', error);
     return false;
   }
@@ -47,26 +43,26 @@ export async function getSubscriptionDetails(userId: string) {
     const user = await client.user.findUnique({
       where: { id: userId },
       select: {
-        hasPaid: true,
-        subscriptionStatus: true,
-        subscriptionPlan: true,
-        subscriptionEndsAt: true,
-        cancelAtPeriodEnd: true,
-        stripeSubscriptionId: true,
         stripeCustomerId: true,
+        subscription: {
+          select: {
+            id: true,
+            stripeSubscriptionId: true,
+            plan: true,
+            period: true,
+            status: true,
+            startDate: true,
+            endDate: true,
+          },
+        },
       },
     });
 
     if (!user) return null;
 
     return {
-      hasPaid: user.hasPaid,
-      status: user.subscriptionStatus,
-      plan: user.subscriptionPlan,
-      endsAt: user.subscriptionEndsAt,
-      cancelAtPeriodEnd: user.cancelAtPeriodEnd ?? false,
-      subscriptionId: user.stripeSubscriptionId,
       customerId: user.stripeCustomerId,
+      subscription: user.subscription,
     };
   } catch (error) {
     console.error('Error getting subscription details:', error);

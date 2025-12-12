@@ -7,12 +7,11 @@ import Image from "next/image";
 import { Menu } from "./Menu";
 import { client } from "@/lib/prisma";
 import { auth } from "../../auth";
+import { hasActiveSubscription } from "@/lib/subscription";
 
 export async function Sidebar() {
   const session = await auth();
   const userId = session?.user?.id ?? null;
-
-  let isPremium = session?.user?.hasPaid === true;
 
   // let profileComplete = false;
   // if (userId) {
@@ -30,6 +29,7 @@ export async function Sidebar() {
 
   let profileComplete = session?.user.profileComplete === true;
   let companyComplete = session?.user.companyComplete === true;
+  const isSubscribed = userId ? await hasActiveSubscription(userId) : false;
 
   return (
     <aside
@@ -55,7 +55,7 @@ export async function Sidebar() {
           isOpen={true}
           companyIncomplete={!companyComplete}
           personalIncomplete={!profileComplete}
-          isPremium={isPremium}
+          isSubscribed={isSubscribed}
         />
       </div>
     </aside>

@@ -138,6 +138,13 @@ const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
   const { nextUrl } = req;
+  
+  // 🔓 CRITICAL: Allow Stripe webhook routes to bypass authentication
+  // Stripe webhooks don't have user sessions and need to be processed
+  if (nextUrl.pathname.startsWith('/api/stripe/webhook')) {
+    return NextResponse.next();
+  }
+  
   const isLoggedIn = !!req.auth;
 
   const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);

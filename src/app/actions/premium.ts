@@ -3,10 +3,6 @@
 import { auth } from "../../../auth";
 import { hasActiveSubscription } from "@/lib/subscription";
 
-/**
- * Check if the current user has an active premium subscription
- * Uses the consolidated subscription checking logic
- */
 export async function isUserPremium() {
   const session = await auth();
   const user = session?.user;
@@ -22,3 +18,6 @@ export async function isUserPremium() {
     subscribed,
   };
 }
+
+
+

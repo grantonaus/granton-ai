@@ -5,6 +5,8 @@ import React, { useEffect, useState, useRef } from "react";
 import jsPDF from "jspdf";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/user";
+import { isUserPremium } from "@/app/actions/premium";
+import UpgradePrompt from "@/components/UpgradePrompt";
 
 interface FinaliseProps {
   applicationText: string;
@@ -51,21 +53,39 @@ export default function Finalise({ applicationText, applicationTitle }: Finalise
   const [isSaved, setIsSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [isPaid, setIsPaid] = useState<boolean | null>(null);
+  const [isChecking, setIsChecking] = useState(true);
   const didUploadRef = useRef(false);
 
+  // Check subscription status
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (!session?.user?.id) {
+        setIsPaid(false);
+        setIsChecking(false);
+        return;
+      }
+      try {
+        const result = await isUserPremium();
+        setIsPaid(result.subscribed);
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        setIsPaid(false);
+      } finally {
+        setIsChecking(false);
+      }
+    };
+    checkSubscription();
+  }, [session]);
 
   const paragraphs = applicationText
     .split(/\n\s*\n/)     // split on blank lines
     .map((p) => p.trim())
     .filter(Boolean);
 
-  const PREVIEW_COUNT = 4; // show first 3 paragraphs un-blurred
+  const PREVIEW_COUNT = 4; // show first 4 paragraphs un-blurred
   const previewParas = paragraphs.slice(0, PREVIEW_COUNT).join("\n\n");
   const restParas = paragraphs.slice(PREVIEW_COUNT).join("\n\n");
-
-  const isPaid = session?.user?.hasPaid;
-
-  // const isPaid = false;
 
 
   useEffect(() => {
@@ -133,7 +153,7 @@ export default function Finalise({ applicationText, applicationTitle }: Finalise
         setIsSaving(false);
       }
     })();
-  }, [applicationText, applicationTitle, session]);
+  }, [applicationText, applicationTitle, session, isPaid]);
 
 
   const saveAsPdf = () => {
@@ -141,6 +161,27 @@ export default function Finalise({ applicationText, applicationTitle }: Finalise
     generatePdf(doc, applicationText);
     doc.save("application.pdf");
   };
+
+  // Show loading state while checking subscription
+  if (isChecking) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-200px)] max-w-[1200px] mx-auto w-full items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  // If not subscribed, show upgrade prompt instead of application
+  if (!isPaid) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-200px)] max-w-[1200px] mx-auto w-full">
+        <UpgradePrompt
+          title="Upgrade to View Your Application"
+          description="Subscribe to Pro to view and save your generated grant application"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-200px)] max-w-[1200px] mx-auto w-full">
@@ -152,87 +193,17 @@ export default function Finalise({ applicationText, applicationTitle }: Finalise
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 text-[15px] text-white tracking-normal min-h-0">
-          {isPaid ? (
-            <pre className="whitespace-pre-wrap">{applicationText}</pre>
-          ) : (
-            <>
-              <div className="relative">
-                <pre className="whitespace-pre-wrap">{previewParas}</pre>
-                <div className="mt-4 mb-2 py-3 px-4 text-[15px] rounded-md bg-[#191C1C] border border-[#68FCF2]/30 font-medium text-center text-[#68FCF2]">
-                  <p className="mb-1">🔒 Upgrade to view the full application</p>
-                </div>
-              </div>
-
-              {restParas && (
-                <div className="relative mt-4">
-                  <pre
-                    className="whitespace-pre-wrap filter blur-sm select-none pointer-events-none"
-                    style={{ lineHeight: "1.5" }}
-                  >
-                    {restParas}
-                  </pre>
-                  <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-[#0E0E0E] pointer-events-none">
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+          <pre className="whitespace-pre-wrap">{applicationText}</pre>
         </div>
       </div>
 
       <div className="flex-shrink-0 pt-4 pb-8">
-        {!isPaid && (
-          <div className="mb-3 p-3 rounded-md bg-[#1A1A1A] border border-[#2A2A2A]">
-            <p className="text-sm text-gray-400 text-center mb-2">
-              💳 Subscription required to save applications
-            </p>
-            <Button
-              type="button"
-              className="w-full h-9 font-semibold bg-[#68FCF2] hover:bg-[#68FCF2]/80 text-black"
-              onClick={async () => {
-                try {
-                  const res = await fetch("/api/stripe/checkout", {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ isAnnual: false }),
-                  });
-                  if (res.ok) {
-                    const { url } = await res.json();
-                    if (url) {
-                      window.location.href = url;
-                    } else {
-                      alert("Failed to get checkout URL. Please try again.");
-                    }
-                  } else {
-                    let errorMessage = "Failed to start checkout. Please try again.";
-                    try {
-                      const error = await res.json();
-                      errorMessage = error.details || error.error || errorMessage;
-                    } catch (e) {
-                      const text = await res.text();
-                      errorMessage = text || errorMessage;
-                    }
-                    alert(`Error: ${errorMessage}`);
-                  }
-                } catch (error) {
-                  console.error("Error starting checkout:", error);
-                  alert("An error occurred. Please try again.");
-                }
-              }}
-            >
-              Subscribe Now
-            </Button>
-          </div>
-        )}
         <Button
           type="button"
-          disabled={!isPaid}
-          className="w-full h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer disabled:bg-[#282828] disabled:text-[#626262] disabled:cursor-not-allowed"
+          className="w-full h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer"
           onClick={saveAsPdf}
         >
-          {isPaid ? "Save as PDF" : "Save as PDF (Requires Subscription)"}
+          Save as PDF
         </Button>
       </div>
     </div>

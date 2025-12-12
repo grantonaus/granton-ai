@@ -1,326 +1,355 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
-import { client } from '@/lib/prisma'; // or wherever your Prisma client lives
-
+import { client } from '@/lib/prisma';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-05-28.basil',
 });
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET as string;
 
-export async function POST(req: NextRequest) {
-  // 1) Read the raw request body as text (App Router does NOT parse it for you):
-  const rawBody = await req.text();
+function extractPeriodFromInvoice(invoice: Stripe.Invoice | null): { start: Date; end: Date } | null {
+  if (!invoice) return null;
 
-  const sig = req.headers.get('stripe-signature');
-
-  if (!sig) {
-    console.error('⚠️ Missing Stripe signature header');
-    return NextResponse.json({ error: 'Missing Stripe signature' }, { status: 400 });
+  // Prefer invoice line period if present
+  const linePeriod = invoice.lines?.data?.[0]?.period;
+  if (linePeriod?.start && linePeriod?.end) {
+    return {
+      start: new Date(linePeriod.start * 1000),
+      end: new Date(linePeriod.end * 1000),
+    };
   }
 
-  // 3) Verify the event. If this fails, we return 400.
+  // Fallback to top-level invoice period_start / period_end
+  const periodStart = (invoice as any).period_start;
+  const periodEnd = (invoice as any).period_end;
+  if (periodStart && periodEnd) {
+    return {
+      start: new Date(periodStart * 1000),
+      end: new Date(periodEnd * 1000),
+    };
+  }
+
+  return null;
+}
+
+function extractPeriodFromSubscription(subscription: Stripe.Subscription): { start: Date; end: Date } | null {
+  const startEpoch = (subscription as any).current_period_start;
+  const endEpoch = (subscription as any).current_period_end;
+  if (startEpoch && endEpoch) {
+    return {
+      start: new Date(startEpoch * 1000),
+      end: new Date(endEpoch * 1000),
+    };
+  }
+
+  // Try latest_invoice if present
+  const latestInvoice = subscription.latest_invoice as Stripe.Invoice | string | null | undefined;
+  if (latestInvoice && typeof latestInvoice !== 'string') {
+    const period = extractPeriodFromInvoice(latestInvoice);
+    if (period) return period;
+  }
+
+  return null;
+}
+
+async function upsertSubscriptionFromStripeSub(subscription: Stripe.Subscription) {
+  const userId = (subscription.metadata as any)?.userId;
+  if (!userId) {
+    console.warn(`Subscription ${subscription.id} missing metadata.userId; skipping`);
+    return;
+  }
+
+  const priceId = subscription.items.data[0]?.price.id;
+  if (!priceId) {
+    console.warn(`Subscription ${subscription.id} missing price; skipping`);
+    return;
+  }
+
+  // Ensure we have period bounds; if missing, refetch with latest_invoice expanded once
+  let subscriptionWithPeriod = subscription;
+  let periodBounds = extractPeriodFromSubscription(subscriptionWithPeriod);
+  if (!periodBounds) {
+    subscriptionWithPeriod = (await stripe.subscriptions.retrieve(subscription.id, {
+      expand: ['latest_invoice'],
+    })) as Stripe.Subscription;
+    periodBounds = extractPeriodFromSubscription(subscriptionWithPeriod);
+  }
+  if (!periodBounds) {
+    console.warn(`Subscription ${subscription.id} missing period bounds; skipping`);
+    return;
+  }
+  const { start: currentPeriodStart, end: currentPeriodEnd } = periodBounds;
+  const status = mapStripeStatusToSubscriptionStatus(subscription.status);
+  const period = priceId === process.env.STRIPE_ANNUAL_PRICE_ID ? 'ANNUAL' : 'MONTHLY';
+
+  // Ensure the user exists
+  const user = await client.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    console.warn(`Subscription ${subscription.id} references missing user ${userId}; skipping`);
+    return;
+  }
+
+  await client.subscription.upsert({
+    where: { userId },
+    create: {
+      userId,
+      stripeSubscriptionId: subscription.id,
+      plan: 'PRO',
+      period,
+      status,
+      startDate: currentPeriodStart,
+      endDate: currentPeriodEnd,
+    },
+    update: {
+      stripeSubscriptionId: subscription.id,
+      plan: 'PRO',
+      period,
+      status,
+      startDate: currentPeriodStart,
+      endDate: currentPeriodEnd,
+    },
+  });
+
+  console.log(
+    `✅ subscription upserted for user ${userId}, period=${period}, status=${status} (sub=${subscription.id})`
+  );
+}
+
+function mapStripeStatusToSubscriptionStatus(
+  stripeStatus: Stripe.Subscription.Status
+): 'ACTIVE' | 'TRIALING' | 'CANCELED' | 'PAST_DUE' | 'UNPAID' | 'INCOMPLETE' | 'INCOMPLETE_EXPIRED' {
+  const statusMap: Partial<
+    Record<
+      Stripe.Subscription.Status,
+      'ACTIVE' | 'TRIALING' | 'CANCELED' | 'PAST_DUE' | 'UNPAID' | 'INCOMPLETE' | 'INCOMPLETE_EXPIRED'
+    >
+  > = {
+    active: 'ACTIVE',
+    trialing: 'TRIALING',
+    canceled: 'CANCELED',
+    past_due: 'PAST_DUE',
+    unpaid: 'UNPAID',
+    incomplete: 'INCOMPLETE',
+    incomplete_expired: 'INCOMPLETE_EXPIRED',
+    paused: 'CANCELED',
+  };
+  return statusMap[stripeStatus] || 'CANCELED';
+}
+
+export async function POST(req: NextRequest) {
+  console.log('📥 Webhook endpoint called');
+  
+  if (!webhookSecret) {
+    console.error('❌ STRIPE_WEBHOOK_SECRET is missing');
+    return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
+  }
+
+  const body = await req.text();
+  const headersList = await headers();
+  const signature = headersList.get('stripe-signature');
+
+  console.log('📦 Raw event body length:', body.length);
+  console.log('📦 stripe-signature header present?', !!signature);
+
+  if (!signature) {
+    console.error('⚠️  Missing stripe-signature header');
+    return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
+  }
+
   let event: Stripe.Event;
+
   try {
-    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
-    console.log(`📥 Webhook event received: ${event.type} (ID: ${event.id})`);
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    console.log(`🔔  Webhook received: ${event.type} (ID: ${event.id})`);
   } catch (err: any) {
     console.error('⚠️  Webhook signature verification failed:', err.message);
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
 
-  // Helper function to update subscription data
-  const updateSubscriptionData = async (
-    userId: string,
-    subscription: Stripe.Subscription,
-    planType?: string
-  ) => {
-    const isActive = subscription.status === 'active' || subscription.status === 'trialing';
-    const currentPeriodEnd = subscription.current_period_end;
-    const endsAt = currentPeriodEnd 
-      ? new Date(currentPeriodEnd * 1000)
-      : null;
-
-    // Determine plan type from subscription metadata or price
-    let plan = planType;
-    if (!plan && subscription.items?.data?.[0]?.price) {
-      const interval = subscription.items.data[0].price.recurring?.interval;
-      plan = interval === 'year' ? 'annual' : 'monthly';
-    }
-
-    await client.user.update({
-      where: { id: userId },
-      data: {
-        hasPaid: isActive,
-        paidAt: isActive ? new Date() : null,
-        stripeSubscriptionId: subscription.id,
-        subscriptionStatus: subscription.status,
-        subscriptionPlan: plan || null,
-        subscriptionEndsAt: endsAt,
-        cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
-      },
-    });
-  };
-
-  // 4) Handle the event types you care about
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        let userId = session.metadata?.userId;
-        const planType = session.metadata?.planType as string | undefined;
-        const customerId = session.customer as string | null;
-      
-        if (!userId) {
-          console.error('⚠️ No userId in metadata for checkout session:', session.id);
-          // Try to find user by customer ID as fallback
-          if (customerId) {
-            const user = await client.user.findFirst({
-              where: { stripeCustomerId: customerId },
-            });
-            if (user) {
-              userId = user.id;
-              console.log(`✅ Found user by customer ID: ${user.id}`);
-            } else {
-              console.error(`⚠️ Could not find user by customer ID: ${customerId}`);
-              return NextResponse.json({ received: true });
-            }
-          } else {
-            return NextResponse.json({ received: true });
-          }
+        console.log('🛒 Processing checkout.session.completed event');
+        const sessionId = (event.data.object as Stripe.Checkout.Session).id;
+        if (!sessionId) throw new Error('Session ID missing');
+
+        const session = await stripe.checkout.sessions.retrieve(sessionId, {
+          expand: ['line_items', 'subscription', 'subscription.latest_invoice', 'subscription.latest_invoice.lines'],
+        });
+
+        const userId = session.metadata?.userId;
+        console.log('🔎 Session metadata:', session.metadata);
+
+        if (!userId) throw new Error('userId missing in Checkout Session metadata');
+
+        const user = await client.user.findUnique({ where: { id: userId } });
+        if (!user) throw new Error('User not found on checkout.session.completed');
+
+        // Always store/update the Stripe Customer ID
+        await client.user.update({
+          where: { id: user.id },
+          data: { stripeCustomerId: session.customer as string },
+        });
+
+        const subscriptionObj = session.subscription as Stripe.Subscription | string | null;
+        const subscriptionId =
+          typeof subscriptionObj === 'string' ? subscriptionObj : subscriptionObj?.id;
+        if (!subscriptionId) throw new Error('Subscription ID missing');
+
+        const firstItem = session.line_items?.data[0];
+        const priceId = firstItem?.price?.id;
+        if (!priceId) throw new Error('Price ID missing in line_items');
+
+        const period =
+          priceId === process.env.STRIPE_ANNUAL_PRICE_ID ? 'ANNUAL' : 'MONTHLY';
+
+        // Prefer expanded subscription from the session; fall back to a fresh fetch (with latest_invoice) if missing period bounds
+        let subscription =
+          (typeof subscriptionObj === 'object' && subscriptionObj) ||
+          ((await stripe.subscriptions.retrieve(subscriptionId, {
+            expand: ['latest_invoice', 'latest_invoice.lines'],
+          })) as Stripe.Subscription);
+
+        let periodBounds = extractPeriodFromSubscription(subscription);
+
+        // Retry fetch once if period bounds are missing (Stripe CLI fixtures can omit them when not expanded)
+        if (!periodBounds) {
+          subscription = (await stripe.subscriptions.retrieve(subscriptionId, {
+            expand: ['latest_invoice', 'latest_invoice.lines'],
+          })) as Stripe.Subscription;
+          periodBounds = extractPeriodFromSubscription(subscription);
         }
 
-        // Only handle subscription checkouts (one-time payments removed)
-        if (session.mode !== 'subscription') {
-          console.warn(`⚠️ Non-subscription checkout session for userId: ${userId}`);
-          return NextResponse.json({ received: true });
+        // If still missing, log and return 200 to avoid breaking other events
+        if (!periodBounds) {
+          console.warn(`Subscription missing period bounds for ${subscriptionId}; skipping update`);
+          break;
         }
 
-        const subscriptionId = session.subscription as string | null;
+        const { start: currentPeriodStart, end: currentPeriodEnd } = periodBounds;
+        const status = mapStripeStatusToSubscriptionStatus(subscription.status);
+
+        await client.subscription.upsert({
+          where: { userId: user.id },
+          create: {
+            userId: user.id,
+            stripeSubscriptionId: subscriptionId,
+            plan: 'PRO',
+            period,
+            status,
+            startDate: currentPeriodStart,
+            endDate: currentPeriodEnd,
+          },
+          update: {
+            stripeSubscriptionId: subscriptionId,
+            plan: 'PRO',
+            period,
+            status,
+            startDate: currentPeriodStart,
+            endDate: currentPeriodEnd,
+          },
+        });
+
+        console.log(
+          `✅ checkout.session.completed handled for user ${userId}, period=${period}, status=${status}`
+        );
+        break;
+      }
+
+      case 'invoice.payment_succeeded': {
+        console.log('💰 invoice.payment_succeeded');
+        const invoice = event.data.object as Stripe.Invoice;
         
-        if (!subscriptionId) {
-          console.error(`⚠️ No subscription ID in checkout session for userId: ${userId}`);
-          return NextResponse.json({ received: true });
+        let subscriptionId: string | null = null;
+        const invoiceSubscription = (invoice as any).subscription;
+        if (typeof invoiceSubscription === 'string') {
+          subscriptionId = invoiceSubscription;
+        } else if (invoiceSubscription && typeof invoiceSubscription === 'object') {
+          subscriptionId = invoiceSubscription.id;
         }
 
-        try {
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-          
-          // Ensure customer ID is set in database if not already set
-          if (customerId && userId) {
-            const user = await client.user.findUnique({
-              where: { id: userId },
-              select: { stripeCustomerId: true },
-            });
-            
-            if (!user?.stripeCustomerId) {
-              await client.user.update({
-                where: { id: userId },
-                data: { stripeCustomerId: customerId },
-              });
-              console.log(`✅ Updated customer ID for user ${userId}`);
-            }
-          }
-          
-          await updateSubscriptionData(userId, subscription, planType);
-          console.log(`✅ Checkout completed for subscription, userId: ${userId}, status: ${subscription.status}, subscriptionId: ${subscriptionId}`);
-        } catch (err) {
-          console.error(`⚠️ Error retrieving subscription ${subscriptionId}:`, err);
-          // Don't fallback - subscription.created/updated events will handle it
-          throw err;
+        if (!subscriptionId) {
+          console.warn('invoice.payment_succeeded without subscription id');
+          break;
         }
+
+        const subRecord = await client.subscription.findUnique({
+          where: { stripeSubscriptionId: subscriptionId },
+        });
+
+        if (!subRecord) {
+          console.warn('No subscription record for', subscriptionId);
+          break;
+        }
+
+        const subscription = (await stripe.subscriptions.retrieve(subscriptionId)) as Stripe.Subscription;
+        const currentPeriodStart = new Date((subscription as any).current_period_start * 1000);
+        const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
+        const status = mapStripeStatusToSubscriptionStatus(subscription.status);
+
+        const priceId = subscription.items.data[0]?.price.id;
+        const period = priceId === process.env.STRIPE_ANNUAL_PRICE_ID ? 'ANNUAL' : 'MONTHLY';
+
+        // Update subscription with latest period and status
+        await client.subscription.update({
+          where: { stripeSubscriptionId: subscriptionId },
+          data: {
+            period,
+            status,
+            startDate: currentPeriodStart,
+            endDate: currentPeriodEnd,
+          },
+        });
+
+        console.log(`✅ invoice.payment_succeeded handled for user ${subRecord.userId}, status=${status}`);
         break;
       }
 
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
-        const customerId = subscription.customer as string;
-
-        // Try to find user by Stripe customer ID first
-        let user = await client.user.findFirst({
-          where: { stripeCustomerId: customerId },
-        });
-
-        // Fallback: If not found, try to find by userId in subscription metadata
-        if (!user && subscription.metadata?.userId) {
-          console.log(`⚠️ User not found by customer ID ${customerId}, trying userId from metadata: ${subscription.metadata.userId}`);
-          user = await client.user.findUnique({
-            where: { id: subscription.metadata.userId },
-          });
-          
-          // If found by userId, update the customer ID in database
-          if (user) {
-            await client.user.update({
-              where: { id: user.id },
-              data: { stripeCustomerId: customerId },
-            });
-            console.log(`✅ Updated customer ID for user ${user.id} to ${customerId}`);
-          }
-        }
-
-        // Last resort: Get customer from Stripe and try to find by email
-        if (!user) {
-          try {
-            const customer = await stripe.customers.retrieve(customerId);
-            if (customer && !customer.deleted && typeof customer === 'object' && 'email' in customer && customer.email) {
-              user = await client.user.findUnique({
-                where: { email: customer.email },
-              });
-              
-              if (user) {
-                // Update customer ID
-                await client.user.update({
-                  where: { id: user.id },
-                  data: { stripeCustomerId: customerId },
-                });
-                console.log(`✅ Found user by email and updated customer ID for user ${user.id}`);
-              }
-            }
-          } catch (err) {
-            console.error(`⚠️ Error retrieving customer ${customerId}:`, err);
-          }
-        }
-
-        if (!user) {
-          console.error(`⚠️ No user found for customer ${customerId}. Subscription ID: ${subscription.id}, Metadata:`, subscription.metadata);
-          break;
-        }
-
-        // Get plan type from subscription metadata if available
-        const planType = subscription.metadata?.planType;
-
-        await updateSubscriptionData(user.id, subscription, planType);
-        console.log(`✅ Updated subscription for user ${user.id}: ${subscription.status}`);
+        await upsertSubscriptionFromStripeSub(subscription);
         break;
       }
 
       case 'customer.subscription.deleted': {
+        console.log('🧨 customer.subscription.deleted');
         const subscription = event.data.object as Stripe.Subscription;
-        const customerId = subscription.customer as string;
-
-        const user = await client.user.findFirst({
-          where: { stripeCustomerId: customerId },
+        const subRecord = await client.subscription.findUnique({
+          where: { stripeSubscriptionId: subscription.id },
         });
 
-        if (user) {
-          await client.user.update({
-            where: { id: user.id },
-            data: { 
-              hasPaid: false,
-              paidAt: null,
-              subscriptionStatus: 'canceled',
-              subscriptionEndsAt: subscription.canceled_at 
-                ? new Date(subscription.canceled_at * 1000)
-                : new Date(),
-              cancelAtPeriodEnd: false,
-            },
-          });
-          console.log(`✅ Cancelled subscription for user ${user.id}`);
-        } else {
-          console.error(`⚠️ No user found for customer ${customerId} when deleting subscription`);
-        }
-        break;
-      }
-
-      case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as Stripe.Invoice;
-        const customerId = invoice.customer as string;
-        
-        // Only process subscription invoices
-        const subscription = (invoice as any).subscription;
-        const subscriptionId = subscription 
-          ? (typeof subscription === 'string' ? subscription : (subscription as Stripe.Subscription).id)
-          : null;
-
-        if (!subscriptionId) {
-          // Not a subscription invoice, skip
+        if (!subRecord) {
+          console.error('No subscription record on deletion for', subscription.id);
           break;
         }
 
-        const user = await client.user.findFirst({
-          where: { stripeCustomerId: customerId },
+        // Optionally: delete your subscription row
+        await client.subscription.delete({
+          where: { stripeSubscriptionId: subscription.id },
         });
 
-        if (!user) {
-          console.error(`⚠️ No user found for customer ${customerId} when processing invoice`);
-          break;
-        }
-
-        // Retrieve subscription to get full details
-        try {
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-          const planType = subscription.metadata?.planType;
-          await updateSubscriptionData(user.id, subscription, planType);
-          console.log(`✅ Recurring payment succeeded for user ${user.id}, invoice: ${invoice.id}`);
-        } catch (err) {
-          console.error(`⚠️ Error retrieving subscription ${subscriptionId}:`, err);
-          // Fallback: just mark as paid
-          await client.user.update({
-            where: { id: user.id },
-            data: { 
-              hasPaid: true,
-              paidAt: new Date(),
-            },
-          });
-        }
-        break;
-      }
-
-      case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice;
-        const customerId = invoice.customer as string;
-        
-        // Only process subscription invoices
-        const subscription = (invoice as any).subscription;
-        const subscriptionId = subscription 
-          ? (typeof subscription === 'string' ? subscription : (subscription as Stripe.Subscription).id)
-          : null;
-
-        if (!subscriptionId) {
-          break;
-        }
-
-        const user = await client.user.findFirst({
-          where: { stripeCustomerId: customerId },
-        });
-
-        if (!user) {
-          break;
-        }
-
-        // Check subscription status - only revoke if truly past_due or unpaid
-        try {
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-          const shouldRevoke = ['past_due', 'unpaid', 'incomplete', 'incomplete_expired'].includes(subscription.status);
-          
-          if (shouldRevoke) {
-            await client.user.update({
-              where: { id: user.id },
-              data: { 
-                hasPaid: false,
-                subscriptionStatus: subscription.status,
-              },
-            });
-            console.log(`⚠️ Payment failed for user ${user.id}, subscription status: ${subscription.status}`);
-          }
-        } catch (err) {
-          console.error(`⚠️ Error retrieving subscription ${subscriptionId}:`, err);
-        }
+        console.log(`✅ customer.subscription.deleted handled, user ${subRecord.userId} subscription deleted`);
         break;
       }
 
       default:
-        console.log(`ℹ️  Unhandled event type: ${event.type}`);
+        console.log(`ℹ️  Unhandled event type ${event.type}`);
     }
-  } catch (err) {
-    console.error('❌  Error in webhook logic:', err);
-    return NextResponse.json({ error: 'Webhook handler error' }, { status: 500 });
+  } catch (err: any) {
+    console.error('💥 Error handling webhook:', err);
+    return NextResponse.json(
+      {
+        error: 'Webhook handler error',
+        message: err?.message,
+        eventType: (event as any)?.type,
+      },
+      { status: 500 }
+    );
   }
 
-  // 5) Return a 200 to tell Stripe we got it
+  console.log(`✅ Webhook ${(event as any).type} processed successfully`);
   return NextResponse.json({ received: true }, { status: 200 });
 }

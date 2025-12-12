@@ -11,12 +11,10 @@ import { useState } from "react";
 
 interface SheetMenuClientProps {
   profileComplete: boolean;
-  isPremium: boolean;
 }
 
 export default function SheetMenuClient({
   profileComplete,
-  isPremium,
 }: SheetMenuClientProps) {
   const [open, setOpen] = useState(false);
 
@@ -39,7 +37,6 @@ export default function SheetMenuClient({
         <Menu
           isOpen={true}
           personalIncomplete={!profileComplete}
-          isPremium={isPremium}
           onLinkClick={() => setOpen(false)}
         />
       </DrawerContent>

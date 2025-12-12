@@ -103,7 +103,7 @@ export async function GET() {
       "match_grants",
       {
         query_embedding: companyEmbedding,
-        match_threshold: 0.20, // similarity threshold
+        match_threshold: 0.30, // similarity threshold
         match_count: 20, // limit results
       }
     );

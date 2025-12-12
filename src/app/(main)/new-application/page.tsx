@@ -197,43 +197,8 @@ export default function NewApplicationPage() {
 
 
   const submitAll = useCallback(async () => {
-    if (!session?.user.hasPaid) {
-      try {
-        const res = await fetch("/api/stripe/checkout", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ isAnnual: false }),
-        });
-
-        if (!res.ok) {
-          let errorMessage = "Failed to create checkout session";
-          try {
-            const errorText = await res.json();
-            errorMessage = errorText.details || errorText.error || errorMessage;
-          } catch (e) {
-            const text = await res.text();
-            errorMessage = text || errorMessage;
-          }
-          throw new Error(errorMessage);
-        }
-
-        const { url } = await res.json();
-        if (url) {
-          window.location.href = url;
-        } else {
-          throw new Error("No checkout URL returned from API");
-        }
-      } catch (error: any) {
-        console.error("Error starting checkout:", error);
-        alert(error.message || "Failed to start checkout. Please try again.");
-      }
-      return;
-    }
-
     nextStep();
-  }, [session?.user.hasPaid, nextStep]);
+  }, [nextStep]);
 
 
 

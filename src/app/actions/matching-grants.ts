@@ -3,8 +3,8 @@
 import { auth } from "../../../auth";
 import { client } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
-import { hasActiveSubscription } from "@/lib/subscription";
 import OpenAI from "openai";
+import { hasActiveSubscription } from "@/lib/subscription";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -53,12 +53,14 @@ export interface MatchingGrantsData {
 export async function getMatchingGrants(): Promise<MatchingGrantsData> {
   try {
     const session = await auth();
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return { grants: [], error: "Not authenticated" };
     }
 
-    // Check if user has active subscription
-    const hasActive = await hasActiveSubscription(session.user.id);
+    const userId = session.user.id;
+
+    // Check subscription
+    const hasActive = await hasActiveSubscription(userId);
     if (!hasActive) {
       return {
         grants: [],
@@ -68,7 +70,7 @@ export async function getMatchingGrants(): Promise<MatchingGrantsData> {
     }
 
     const dbUser = await client.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: {
         companyName: true,
         companyBackground: true,

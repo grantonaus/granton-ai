@@ -3,7 +3,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { client } from "@/lib/prisma";
 import { auth } from "../../../../auth";
-import { hasActiveSubscription } from "@/lib/subscription";
 
 
 export async function GET() {
@@ -57,12 +56,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const userId = session.user.id;
-
-    // Check subscription status directly from database
-    const hasActive = await hasActiveSubscription(userId);
-    if (!hasActive) {
-      return NextResponse.json({ error: "Subscription required" }, { status: 403 });
-    }
 
     const { name, date, pdfUrl } = await request.json();
     if (!name || !date || !pdfUrl) {
