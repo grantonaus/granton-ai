@@ -166,8 +166,18 @@ Requirements:
       ],
     });
 
+    const generatedText = result.text?.trim() || "";
+    
+    if (!generatedText) {
+      console.error("AI generation returned empty result");
+      return NextResponse.json(
+        { error: "Failed to generate company background. The AI returned an empty response. Please try again or provide more information." },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { company_background: result.text.trim() },
+      { company_background: generatedText },
       { status: 200 }
     );
   } catch (err: any) {

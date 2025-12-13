@@ -1,29 +1,29 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Search, Database, MapPin } from "lucide-react";
+import { FileText, Database, Zap } from "lucide-react";
 
 const features = [
     {
-        icon: Search,
-        tag: "Smart Technology",
-        title: "AI-Powered Matching",
+        icon: FileText,
+        tag: "AI Technology",
+        title: "AI Grant Writer",
         description:
-            "Our advanced algorithm analyzes your business profile to find the most relevant grants from federal and state databases.",
+            "Generate professional grant applications tailored to each opportunity using our advanced AI writer that understands grant requirements and your business profile.",
     },
     {
         icon: Database,
         tag: "Complete Coverage",
-        title: "Comprehensive Database",
+        title: "Grant Database",
         description:
-            "Access to 500+ Australian government grants, updated daily with new opportunities and closing dates.",
+            "Access to 200+ Australian government grants, updated daily with new opportunities, closing dates, and detailed eligibility requirements.",
     },
     {
-        icon: MapPin,
-        tag: "Local Opportunities",
-        title: "Location-Based Matching",
+        icon: Zap,
+        tag: "Smart Matching",
+        title: "AI-Powered Matches",
         description:
-            "Find federal grants plus state-specific opportunities for NSW, VIC, QLD, WA, SA, TAS, ACT, and NT.",
+            "Our intelligent algorithm analyzes your business profile to find the most relevant grants from federal and state databases in seconds.",
     },
 ];
 

@@ -117,6 +117,30 @@ export default function CompanyDetails({
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // Watch fields needed for background generation
+  const companyName = form.watch("company_name");
+  const websiteUrl = form.watch("website_url");
+  const country = form.watch("country");
+  const product = form.watch("product");
+  const competitorsUniqueValueProposition = form.watch("competitors_unique_value_proposition");
+  const currentStage = form.watch("current_stage");
+  const mainObjective = form.watch("main_objective");
+  const targetCustomers = form.watch("target_customers");
+  const fundingStatus = form.watch("funding_status");
+
+  // Check if at least one field is filled (or website URL provided)
+  const canGenerate = Boolean(
+    (websiteUrl && websiteUrl.trim()) ||
+    (companyName && companyName.trim()) ||
+    (country && country.trim()) ||
+    (product && product.trim()) ||
+    (competitorsUniqueValueProposition && competitorsUniqueValueProposition.trim()) ||
+    (currentStage && currentStage.trim()) ||
+    (mainObjective && mainObjective.trim()) ||
+    (targetCustomers && targetCustomers.trim()) ||
+    (fundingStatus && fundingStatus.trim())
+  );
+
   // Only fetch data if defaultValues are not provided (for backward compatibility)
   // If defaultValues are provided, use them directly - this prevents double fetching
   useEffect(() => {
@@ -419,59 +443,71 @@ export default function CompanyDetails({
                       value={field.value ?? ""}
                     />
                   </FormControl>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={async () => {
-                      setIsGenerating(true);
-                      try {
-                        const formValues = form.getValues();
-                        const response = await fetch("/api/generate-company-background", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            company_name: formValues.company_name,
-                            website_url: formValues.website_url,
-                            country: formValues.country,
-                            product: formValues.product,
-                            competitors_unique_value_proposition: formValues.competitors_unique_value_proposition,
-                            current_stage: formValues.current_stage,
-                            main_objective: formValues.main_objective,
-                            target_customers: formValues.target_customers,
-                            funding_status: formValues.funding_status,
-                          }),
-                        });
+                  <div className="space-y-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={async () => {
+                        setIsGenerating(true);
+                        try {
+                          const formValues = form.getValues();
+                          const response = await fetch("/api/generate-company-background", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              company_name: formValues.company_name,
+                              website_url: formValues.website_url,
+                              country: formValues.country,
+                              product: formValues.product,
+                              competitors_unique_value_proposition: formValues.competitors_unique_value_proposition,
+                              current_stage: formValues.current_stage,
+                              main_objective: formValues.main_objective,
+                              target_customers: formValues.target_customers,
+                              funding_status: formValues.funding_status,
+                            }),
+                          });
 
-                        if (!response.ok) {
-                          const error = await response.json();
-                          throw new Error(error.error || "Failed to generate");
+                          if (!response.ok) {
+                            const error = await response.json();
+                            throw new Error(error.error || "Failed to generate");
+                          }
+
+                          const data = await response.json();
+                          
+                          if (!data.company_background || !data.company_background.trim()) {
+                            throw new Error("Generated background is empty. Please try again or provide more information.");
+                          }
+                          
+                          form.setValue("company_background", data.company_background);
+                          toast.success("Company background generated successfully!");
+                        } catch (err: any) {
+                          console.error("Error generating company background:", err);
+                          toast.error(err.message || "Failed to generate company background");
+                        } finally {
+                          setIsGenerating(false);
                         }
-
-                        const data = await response.json();
-                        form.setValue("company_background", data.company_background);
-                        toast.success("Company background generated successfully!");
-                      } catch (err: any) {
-                        console.error("Error generating company background:", err);
-                        toast.error(err.message || "Failed to generate company background");
-                      } finally {
-                        setIsGenerating(false);
-                      }
-                    }}
-                    disabled={isGenerating}
-                    className="cursor-pointer mt-1 w-full h-11 flex items-center justify-center gap-2 bg-[#151414] text-white hover:bg-[#151414]/80 hover:text-white transition-colors"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <div className="size-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="size-4" />
-                        Generate with AI
-                      </>
+                      }}
+                      disabled={isGenerating || !canGenerate}
+                      className="cursor-pointer mt-1 w-full h-11 flex items-center justify-center gap-2 bg-[#151414] text-white hover:bg-[#151414]/80 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <div className="size-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="size-4" />
+                          Generate with AI
+                        </>
+                      )}
+                    </Button>
+                    {!canGenerate && !isGenerating && (
+                      <p className="text-xs text-muted-foreground">
+                        Fill in at least one field above or provide a website URL to generate background
+                      </p>
                     )}
-                  </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

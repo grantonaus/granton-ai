@@ -18,7 +18,7 @@ const steps = [
         title: "AI Analysis",
         time: "Instant",
         description:
-            "Our intelligent system analyzes 500+ grants and finds the best matches for your unique profile.",
+            "Our intelligent system analyzes 200+ grants and finds the best matches for your unique profile.",
     },
     {
         id: 3,
@@ -31,10 +31,10 @@ const steps = [
     {
         id: 4,
         number: "04",
-        title: "Apply & Track",
+        title: "Apply with AI",
         time: "Ongoing",
         description:
-            "Use our tools to track applications, set reminders, and monitor your success rate.",
+            "Use our AI application writer to generate professional grant applications.",
     },
 ];
 
