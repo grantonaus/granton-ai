@@ -99,12 +99,16 @@ export async function GET() {
     // ------------------------------
     console.log("[MATCH API] Calling RPC: match_grants");
 
+    // Only show real matches - filter out weak ones
+    const MIN_THRESHOLD = 0.50; // Minimum similarity to show (filters out 45% matches)
+    const MAX_SIMILARITY = 0.85; // Expected max similarity for excellent matches
+
     const { data: matches, error: rpcError } = await supabase.rpc(
       "match_grants",
       {
         query_embedding: companyEmbedding,
-        match_threshold: 0.30, // similarity threshold
-        match_count: 200, // limit results
+        match_threshold: MIN_THRESHOLD, // Higher threshold for real matches only
+        match_count: 200, // Show all matches above threshold
       }
     );
 
@@ -118,10 +122,11 @@ export async function GET() {
 
     console.log("[MATCH API] RPC returned:", matches?.length || 0);
 
-    // Example: map 0.25–0.80 similarity → 60–100 display
+    // Remap scores: 0.50-0.85 similarity → 75-100 display
+    // This ensures all matches show at least 75%, good matches (0.65) show ~85%, excellent show 95-100%
     const remapScore = (sim: number) => {
-      const norm = Math.max(0, Math.min(1, (sim - 0.25) / 0.55));
-      return Math.round(60 + norm * 40);
+      const normalized = Math.max(0, Math.min(1, (sim - MIN_THRESHOLD) / (MAX_SIMILARITY - MIN_THRESHOLD)));
+      return Math.round(75 + normalized * 25); // 75-100 range
     };
 
     // ------------------------------
@@ -137,7 +142,6 @@ export async function GET() {
       deadline: g.deadline || "—",
       grantUrl: g.url,
       longTitle: g.long_title,
-      // matchScore: Math.round(g.similarity * 100), // from similarity float
       matchScore: remapScore(g.similarity),
       matchReasons: ["AI semantic match"], // you can enrich later
     }));
