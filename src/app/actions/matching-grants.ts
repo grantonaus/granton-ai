@@ -111,8 +111,8 @@ export async function getMatchingGrants(): Promise<MatchingGrantsData> {
       "match_grants",
       {
         query_embedding: companyEmbedding,
-        match_threshold: 0.2,
-        match_count: 20,
+        match_threshold: 0.35,
+        match_count: 200,
       }
     );
 

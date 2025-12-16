@@ -15,7 +15,7 @@ function buildCompanyProfile(u: any): string {
     u.companyBackground && `Background: ${u.companyBackground}`,
     u.product && `Product: ${u.product}`,
     u.competitorsUniqueValueProposition &&
-      `USP: ${u.competitorsUniqueValueProposition}`,
+    `USP: ${u.competitorsUniqueValueProposition}`,
     u.currentStage && `Stage: ${u.currentStage}`,
     u.mainObjective && `Objective: ${u.mainObjective}`,
     u.targetCustomers && `Customers: ${u.targetCustomers}`,
@@ -104,7 +104,7 @@ export async function GET() {
       {
         query_embedding: companyEmbedding,
         match_threshold: 0.30, // similarity threshold
-        match_count: 20, // limit results
+        match_count: 200, // limit results
       }
     );
 
@@ -117,6 +117,12 @@ export async function GET() {
     }
 
     console.log("[MATCH API] RPC returned:", matches?.length || 0);
+
+    // Example: map 0.25–0.80 similarity → 60–100 display
+    const remapScore = (sim: number) => {
+      const norm = Math.max(0, Math.min(1, (sim - 0.25) / 0.55));
+      return Math.round(60 + norm * 40);
+    };
 
     // ------------------------------
     // 5. Map to frontend format
@@ -131,7 +137,8 @@ export async function GET() {
       deadline: g.deadline || "—",
       grantUrl: g.url,
       longTitle: g.long_title,
-      matchScore: Math.round(g.similarity * 100), // from similarity float
+      // matchScore: Math.round(g.similarity * 100), // from similarity float
+      matchScore: remapScore(g.similarity),
       matchReasons: ["AI semantic match"], // you can enrich later
     }));
 
