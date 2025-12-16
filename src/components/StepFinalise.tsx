@@ -11,6 +11,7 @@ import UpgradePrompt from "@/components/UpgradePrompt";
 interface FinaliseProps {
   applicationText: string;
   applicationTitle: string;
+  isProUser?: boolean | null; // Optional prop to avoid flash
 }
 
 // Helper to generate a PDF with consistent margins, dark background, and pagination
@@ -47,36 +48,58 @@ function generatePdf(doc: jsPDF, text: string) {
   }
 }
 
-export default function Finalise({ applicationText, applicationTitle }: FinaliseProps) {
+export default function Finalise({ applicationText, applicationTitle, isProUser }: FinaliseProps) {
   const { session } = useCurrentUser();
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [isPaid, setIsPaid] = useState<boolean | null>(null);
-  const [isChecking, setIsChecking] = useState(true);
+  const [isPaid, setIsPaid] = useState<boolean | null>(isProUser ?? null);
+  const [isChecking, setIsChecking] = useState(isProUser === null);
   const didUploadRef = useRef(false);
 
-  // Check subscription status
+  // Check subscription status if not provided as prop
   useEffect(() => {
+    // If prop is provided, use it immediately
+    if (isProUser !== null && isProUser !== undefined) {
+      setIsPaid(isProUser);
+      setIsChecking(false);
+      return;
+    }
+
+    // Otherwise, check subscription status
+    let mounted = true;
+    
     const checkSubscription = async () => {
       if (!session?.user?.id) {
-        setIsPaid(false);
-        setIsChecking(false);
+        if (mounted) {
+          setIsPaid(false);
+          setIsChecking(false);
+        }
         return;
       }
       try {
         const result = await isUserPremium();
-        setIsPaid(result.subscribed);
+        if (mounted) {
+          setIsPaid(result.subscribed);
+          setIsChecking(false);
+        }
       } catch (error) {
         console.error('Error checking subscription:', error);
-        setIsPaid(false);
-      } finally {
-        setIsChecking(false);
+        if (mounted) {
+          setIsPaid(false);
+          setIsChecking(false);
+        }
       }
     };
+    
+    // Start check immediately
     checkSubscription();
-  }, [session]);
+    
+    return () => {
+      mounted = false;
+    };
+  }, [session, isProUser]);
 
   const paragraphs = applicationText
     .split(/\n\s*\n/)     // split on blank lines

@@ -11,6 +11,7 @@ import { usePersonal } from "@/contexts/PersonalContext";
 import { useCurrentUser } from "@/hooks/user";
 import { processAttachments } from "@/lib/file-upload";
 import type { CompanyDetailsData } from "@/components/StepCompanyDetails";
+import { isUserPremium } from "@/app/actions/premium";
 
 const MAX_STEPS = 5;
 const DEFAULT_APPLICATION_TITLE = "Grant_Application";
@@ -29,6 +30,7 @@ export default function NewApplicationPage() {
   const [applicationTitle, setApplicationTitle] = useState<string>(
     DEFAULT_APPLICATION_TITLE
   );
+  const [isProUser, setIsProUser] = useState<boolean | null>(null);
 
   const nextStep = useCallback(
     () => setCurrentStep((s) => Math.min(s + 1, MAX_STEPS)),
@@ -163,6 +165,20 @@ export default function NewApplicationPage() {
     loadCompanyData();
   }, []);
 
+  // Check subscription status early
+  useEffect(() => {
+    async function checkSubscription() {
+      try {
+        const result = await isUserPremium();
+        setIsProUser(result.subscribed);
+      } catch (error) {
+        console.error("Error checking subscription:", error);
+        setIsProUser(false);
+      }
+    }
+    checkSubscription();
+  }, []);
+
 
 
   const handleGenerateApplication = useCallback(
@@ -259,6 +275,7 @@ export default function NewApplicationPage() {
             <Finalise
               applicationText={generatedApplication}
               applicationTitle={applicationTitle}
+              isProUser={isProUser}
             />
           )}
         </div>
