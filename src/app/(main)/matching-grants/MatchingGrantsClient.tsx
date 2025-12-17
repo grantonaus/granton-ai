@@ -86,19 +86,65 @@ export default function MatchingGrantsClient({
         </div>
       </div>
 
-      <div className="w-full px-5 py-2 lg:py-4">
+      <div className="w-full px-5 py-2 lg:py-4 gap-4">
         {/* Info message */}
         {initialData.message && (
-          <div className="mb-4 p-3 bg-[#24231F] hover:bg-[#24231F]/90 text-[#F8EFC1] rounded-md text-sm">
-            {initialData.message}
+          <div
+            className="
+           cursor-pointer
+            w-full
+            mx-auto
+            max-w-[1200px]
+            bg-[#24231F]
+            hover:bg-[#24231F]/90
+            text-[#F8EFC1]
+            rounded-md
+            px-6
+            py-3
+            flex
+            items-center
+            justify-between
+            transition-colors
+            duration-150
+            ease-in-out
+          "
+          >
+            <div className="flex w-full space-x-2 items-center justify-center">
+
+              <span className="text-sm font-bold">{initialData.message}</span>
+            </div>
+
           </div>
         )}
 
         {/* Error message */}
-        {initialData.error && initialData.error !== "Subscription required" && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-md text-sm text-red-400">
-            {initialData.error}
+        {initialData.error && initialData.error !== "Subscription required" && initialData.error !== "Company profile incomplete" && (
+          <div
+          className="
+           cursor-pointer
+            w-full
+            mx-auto
+            max-w-[1200px]
+            bg-[#24231F]
+            hover:bg-[#24231F]/90
+            text-[#F8EFC1]
+            rounded-md
+            px-6
+            py-3
+            flex
+            items-center
+            justify-between
+            transition-colors
+            duration-150
+            ease-in-out
+          "
+        >
+          <div className="flex w-full space-x-2 items-center justify-center">
+
+            <span className="text-sm font-bold">{initialData.error}</span>
           </div>
+
+        </div>
         )}
 
         {/* Results */}

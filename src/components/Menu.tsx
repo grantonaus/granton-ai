@@ -108,8 +108,12 @@ export function Menu({
                 <p className="pb-2"></p>
               )}
               {menus.map(
-                ({ href, label, icon: Icon, active, submenus }, index) =>
-                  submenus.length === 0 ? (
+                ({ href, label, icon: Icon, active, submenus }, index) => {
+                  // In mobile (when onLinkClick is provided), render "Past Applications" as simple link without submenu
+                  const isMobile = onLinkClick !== undefined;
+                  const shouldRenderAsSimpleLink = submenus.length === 0 || (isMobile && label === "Past Applications");
+                  
+                  return shouldRenderAsSimpleLink ? (
                     <div className="w-full" key={index}>
                       <TooltipProvider disableHoverableContent>
                         <Tooltip delayDuration={100}>
@@ -179,7 +183,8 @@ export function Menu({
                       isOpen={isOpen}
                       onLinkClick={onLinkClick}
                     />
-                  )
+                  );
+                }
               )}
             </li>
           ))}
