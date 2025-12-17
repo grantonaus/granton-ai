@@ -320,20 +320,43 @@ Your main task is to go through the "APPLICATION FORM TEXT" section and identify
 
 You are given:
 1. The full text of the grant application form (in "APPLICATION FORM TEXT" section) - THIS IS YOUR PRIMARY SOURCE
-2. The information the user has already provided (in COMPANY DETAILS, GRANT DETAILS, BUDGET DETAILS sections)
+2. The information the user has already provided (in COMPANY DETAILS, GRANT DETAILS, BUDGET DETAILS sections) - DO NOT RE-ASK THESE
 3. Any attached files or extracted content from company websites and guidelines
+
+CRITICAL: Before asking any question, you MUST check if it's already answered in the provided sections below.
+
+ALREADY PROVIDED INFORMATION (DO NOT ASK ABOUT THESE):
+COMPANY DETAILS contains:
+- Company Name
+- Company Background / Description
+- Product / Service Description
+- Competitors / Unique Value Proposition
+- Current Stage
+- Main Objective
+- Target Customers
+- Funding Status
+- Country / Location
+- Website information
+
+GRANT DETAILS contains:
+- Grant Link
+- Amount Applying For
+
+BUDGET DETAILS contains:
+- Allocation Details / Budget breakdown
 
 Your process:
 1. FIRST: Extract ALL questions/required fields from the "APPLICATION FORM TEXT" section
-2. SECOND: For each question/field, check if it's already answered in COMPANY DETAILS, GRANT DETAILS, or BUDGET DETAILS
-3. THIRD: Generate a question for each unanswered required field from the form
+2. SECOND: For EACH question/field, carefully check if it's already answered in COMPANY DETAILS, GRANT DETAILS, or BUDGET DETAILS
+3. THIRD: ONLY generate questions for fields that are NOT answered in the provided information
 4. NO LIMITS: Include ALL required questions from the form that aren't answered - there is no limit on the number of questions
 
 Rules:
 ✅ PRIORITIZE questions from the APPLICATION FORM TEXT - these are mandatory
-✅ Ask about ALL required fields from the form that require written responses
-✅ Only skip questions that are clearly and completely answered in the provided information
-✅ Include questions that need written responses (text-based answers)
+✅ Ask about ALL required fields from the form that require written responses AND are not already provided
+✅ CAREFULLY check COMPANY DETAILS, GRANT DETAILS, and BUDGET DETAILS before asking any question
+✅ If a form question asks about company background, product, target customers, objectives, stage, funding status, or budget - CHECK if it's in COMPANY DETAILS or BUDGET DETAILS first
+✅ Only ask questions that are truly missing from the provided information
 ✅ Return each question as a short, natural, one-sentence prompt
 ✅ Keep the tone conversational and professional
 
@@ -344,15 +367,29 @@ Rules:
   - File uploads (unless asking what to include in the file)
   - Checkboxes or dropdown selections (unless asking for explanation/justification)
 
-❌ DO NOT repeat questions that are already fully answered in:
-  - COMPANY DETAILS (name, background, product, stage, objective, customers, funding status)
-  - GRANT DETAILS (grant link, amount applying for)
-  - BUDGET DETAILS (allocation details)
+❌ DO NOT ask about anything that's already in COMPANY DETAILS, GRANT DETAILS, or BUDGET DETAILS:
+  - Company name, background, description
+  - Product/service description
+- Target customers
+  - Company objectives, goals, mission
+  - Current stage, funding status
+- Unique value proposition
+  - Budget allocation details
+  - Grant amount or link
+  - Location/country
+
+Examples of what NOT to ask (if already in COMPANY DETAILS):
+- "What is your company background?" → Already provided
+- "Describe your product" → Already provided
+- "Who are your target customers?" → Already provided
+- "What is your main objective?" → Already provided
+- "What stage is your company at?" → Already provided
+- "What is your funding status?" → Already provided
 
 Important notes:
-- If a form question asks about something that's partially covered in the provided info, you may still need to ask it if the form requires more detail or a specific format
+- Be thorough in checking the provided information - if ANY part of the question is answered, do not ask it
 - If the APPLICATION FORM TEXT has many required fields, include questions for ALL of them that aren't answered
-- Focus on completeness - ensure the user answers every required question from the form
+- Focus on completeness - ensure the user answers every required question from the form that isn't already provided
 
 Return your result in this format:
 
