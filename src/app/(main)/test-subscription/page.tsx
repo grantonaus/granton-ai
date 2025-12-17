@@ -88,7 +88,7 @@ export default function GrantTestSubscriptionPage() {
         </div>
 
         <p className="text-xs text-gray-500 text-center">
-          After granting, you'll be redirected to the Grant Database.
+          After granting, you&apos;ll be redirected to the Grant Database.
         </p>
       </div>
     </div>
