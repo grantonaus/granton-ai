@@ -99,16 +99,18 @@ export async function GET() {
     // ------------------------------
     console.log("[MATCH API] Calling RPC: match_grants");
 
-    // Only show real matches - filter out weak ones
-    const MIN_THRESHOLD = 0.50; // Minimum similarity to show (filters out 45% matches)
+    // Always show at least 10 best matches, even with lower scores
+    const MIN_THRESHOLD = 0.25; // Lower threshold to get more matches
     const MAX_SIMILARITY = 0.85; // Expected max similarity for excellent matches
+    const MIN_MATCHES_REQUIRED = 10; // Always return at least 10 matches
 
-    const { data: matches, error: rpcError } = await supabase.rpc(
+    // Call Supabase RPC with lower threshold to get more results
+    let { data: matches, error: rpcError } = await supabase.rpc(
       "match_grants",
       {
         query_embedding: companyEmbedding,
-        match_threshold: MIN_THRESHOLD, // Higher threshold for real matches only
-        match_count: 200, // Show all matches above threshold
+        match_threshold: MIN_THRESHOLD, // Lower threshold to ensure we get enough matches
+        match_count: Math.max(MIN_MATCHES_REQUIRED * 2, 50), // Request more to ensure we have enough
       }
     );
 
@@ -120,19 +122,34 @@ export async function GET() {
       );
     }
 
-    console.log("[MATCH API] RPC returned:", matches?.length || 0);
+    // If we have fewer than required matches, try with even lower threshold
+    if (!matches || matches.length < MIN_MATCHES_REQUIRED) {
+      const { data: moreMatches } = await supabase.rpc("match_grants", {
+        query_embedding: companyEmbedding,
+        match_threshold: 0.20, // Even lower threshold
+        match_count: MIN_MATCHES_REQUIRED * 2,
+      });
+      if (moreMatches && moreMatches.length > (matches?.length || 0)) {
+        matches = moreMatches;
+      }
+    }
 
-    // Remap scores: 0.50-0.85 similarity → 75-100 display
-    // This ensures all matches show at least 75%, good matches (0.65) show ~85%, excellent show 95-100%
+    // Take top matches (sorted by similarity descending from RPC)
+    const topMatches = (matches || []).slice(0, Math.max(MIN_MATCHES_REQUIRED, matches?.length || 0));
+
+    console.log("[MATCH API] RPC returned:", topMatches.length, "matches");
+
+    // Remap scores: 0.25-0.85 similarity → 60-100 display
+    // Lower scores (0.25-0.50) map to 60-75%, good matches (0.50-0.70) show 75-90%, excellent (0.70+) show 90-100%
     const remapScore = (sim: number) => {
       const normalized = Math.max(0, Math.min(1, (sim - MIN_THRESHOLD) / (MAX_SIMILARITY - MIN_THRESHOLD)));
-      return Math.round(75 + normalized * 25); // 75-100 range
+      return Math.round(60 + normalized * 40); // 60-100 range
     };
 
     // ------------------------------
     // 5. Map to frontend format
     // ------------------------------
-    const formatted = (matches || []).map((g: any, index: number) => ({
+    const formatted = topMatches.map((g: any, index: number) => ({
       id: g.id,
       title: g.short_title || g.long_title || "Untitled Grant",
       agency: g.state || "Unknown",
