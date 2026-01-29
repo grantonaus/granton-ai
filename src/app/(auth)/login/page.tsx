@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, Suspense } from "react";
 import Link from "next/link";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,18 +23,19 @@ import { FormSuccess } from "@/components/FormSuccess";
 import { Loader } from "@/components/Loader";
 import { SignInSchema } from "@/components/form/login";
 import { login } from "@/app/actions/login";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 
 type LoginData = z.infer<typeof SignInSchema>;
 
-
-const LoginPage = () => {
+const LoginForm = () => {
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
   const [isPending, startTransition] = useTransition();
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/new-application";
 
   const form = useForm<LoginData>({
     resolver: zodResolver(SignInSchema),
@@ -46,26 +47,20 @@ const LoginPage = () => {
   });
 
   const { handleSubmit, formState: { isSubmitted, errors }, watch, reset, control } = form;
-  const onSubmit = (values: any) => {
+  const onSubmit = (values: LoginData) => {
     setError("");
     setSuccess("");
-    console.log("Starting login process with values:", values); 
 
     startTransition(async () => {
       try {
-        const result = await login(values);
-        console.log("Login result:", result); 
+        const result = await login(values, callbackUrl);
 
         if (result?.error) {
-          console.error("Login Error:", result.error);
           setError(result.error);
           reset();
-        } else {
-          // Login successful
+        } else if (result?.success && result?.callbackUrl) {
           setSuccess("Login successful!");
-          console.log("Login successful.");
-
-          router.push("/new-application");
+          window.location.href = result.callbackUrl;
         }
       } catch (err) {
         console.error("Unexpected Error:", err);
@@ -170,6 +165,21 @@ const LoginPage = () => {
         </Link>
       </div>
     </div>
+  );
+};
+
+const LoginPage = () => {
+  return (
+    <Suspense fallback={
+      <div className="max-w-lg p-7 mt-14 rounded-xl bg-[#0f0f0f] border border-[#1C1C1C]">
+        <h5 className="font-black text-xl text-white">Log In</h5>
+        <div className="mt-5">
+          <Loader loading={true}>Loading...</Loader>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 };
 

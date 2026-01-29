@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "../../../auth";
+import { getServerSession } from "@/lib/auth-server";
 import { client } from "@/lib/prisma";
 
 export interface PastApplication {
@@ -12,7 +12,7 @@ export interface PastApplication {
 
 export async function getPastApplications(): Promise<PastApplication[]> {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return [];
     }

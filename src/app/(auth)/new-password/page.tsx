@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -27,7 +27,7 @@ import { NewPasswordSchema } from "@/components/form/new-password";
 
 type NewPasswordFormValues = z.infer<typeof NewPasswordSchema>;
 
-export default function ResetPasswordPage() {
+function NewPasswordForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token") ?? ""; 
@@ -156,5 +156,22 @@ export default function ResetPasswordPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function NewPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-lg p-7 mt-14 mx-auto rounded-xl bg-[#0f0f0f] border border-[#1C1C1C]">
+          <h5 className="font-black text-xl text-white">Reset Password</h5>
+          <div className="mt-5">
+            <Loader loading={true}>Loading...</Loader>
+          </div>
+        </div>
+      }
+    >
+      <NewPasswordForm />
+    </Suspense>
   );
 }

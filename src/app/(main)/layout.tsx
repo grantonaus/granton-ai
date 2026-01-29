@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Sidebar } from "@/components/Sidebar";
 import { PersonalProvider } from "@/contexts/PersonalContext";
 import { client } from "@/lib/prisma";
-import { auth } from "../../../auth";
+import { getServerSession } from "@/lib/auth-server";
 import { DynamicNavbar } from "@/components/DynamicNavbar";
 
 export const dynamic = 'force-dynamic';
@@ -14,7 +14,7 @@ type ExploreLayoutProps = {
 
 export default async function ExploreLayout({ children }: ExploreLayoutProps) {
   // 1) Run on the server:
-  const session = await auth();
+  const session = await getServerSession();
   const userId = session?.user?.id ?? null;
 
   let profileComplete = false;

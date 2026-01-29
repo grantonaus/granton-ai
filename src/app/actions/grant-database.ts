@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "../../../auth";
+import { getServerSession } from "@/lib/auth-server";
 import { supabase } from "@/lib/supabase";
 
 export type Grant = {
@@ -24,7 +24,7 @@ export interface GrantDatabaseData {
 
 export async function getGrantDatabase(): Promise<GrantDatabaseData> {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user) {
       return { grants: [], savedGrantIds: [], newCount: 0 };
     }

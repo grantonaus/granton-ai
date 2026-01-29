@@ -1,11 +1,10 @@
 "use server";
 
 import * as z from "zod";
-import bcrypt from "bcryptjs";
-import { getUserByEmail } from "@/data/user";
-
 import { client } from "@/lib/prisma";
 import { SignUpSchema } from "@/components/form/sign-up";
+import { hashPassword, createSession } from "@/lib/auth-custom";
+import { getUserByEmail } from "@/data/user";
 
 export const register = async (values: z.infer<typeof SignUpSchema>) => {
   try {
@@ -27,7 +26,7 @@ export const register = async (values: z.infer<typeof SignUpSchema>) => {
     }
 
     // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await hashPassword(password);
     console.log("Password successfully hashed", { email });
 
     // Split `name` into firstName + lastName
@@ -35,11 +34,12 @@ export const register = async (values: z.infer<typeof SignUpSchema>) => {
     const firstName = parts[0];
     const lastName = parts.slice(1).join(" ") || "";
 
-    // Create user in Prisma (lastName is non‐nullable in your schema)
-    await client.user.create({
+    // Create user in database
+    const user = await client.user.create({
       data: {
         firstName,
         lastName,
+        name: name.trim(),
         email,
         password: hashedPassword,
         contactSalutation: "",            
@@ -50,6 +50,10 @@ export const register = async (values: z.infer<typeof SignUpSchema>) => {
         contactMobile: "",                
       },
     });
+
+    // Create session
+    await createSession(user.id);
+
     return { success: "Account created successfully!" };
 
   } catch (error) {

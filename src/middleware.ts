@@ -1,159 +1,84 @@
-// import { auth } from "../auth";
-// import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { DEFAULT_LOGIN_REDIRECT, authRoutes, publicRoutes } from "../routes";
 
-// const publicRoutes = [
-//   "^/$",
-//   "/login",
-//   "/sign-up",
-//   "/forgot-password",
-//   "/reset-password",
-//   "/new-password"
-// ];
+const SECRET_KEY = process.env.NEXTAUTH_SECRET || process.env.BETTER_AUTH_SECRET || "fallback-secret-key-change-in-production";
+const SESSION_COOKIE_NAME = "auth-session";
 
-// const protectedRoutes = [
-//   "/new-application",
-//   "/past-applications",
-//   "/company-details",
-//   "/personal-details",
-//   "/matching-grants"
-// ];
+function base64UrlDecode(str: string): string {
+  let base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (base64.length % 4) {
+    base64 += "=";
+  }
+  return Buffer.from(base64, "base64").toString();
+}
 
-// export default auth((req) => {
-//   const pathname = req.nextUrl.pathname;
-//   const isLoggedIn = !!req.auth;
+async function verifyJWT(token: string): Promise<Record<string, unknown> | null> {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
 
-//   const isPublic = publicRoutes.includes(pathname);
-//   const isProtected = protectedRoutes.includes(pathname);
+    const encoder = new TextEncoder();
+    const signatureInput = `${parts[0]}.${parts[1]}`;
 
-//   // 🔁 If visiting login (or any public page), allow access
-//   if (isPublic) return NextResponse.next();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(SECRET_KEY),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
 
-//   // 🔒 If trying to access a protected route without login → redirect to /login
-//   if (isProtected && !isLoggedIn) {
-//     const url = new URL("/login", req.url);
-//     url.searchParams.set("callbackUrl", pathname);
-//     return NextResponse.redirect(url);
-//   }
+    // Decode signature from base64url
+    let base64 = parts[2].replace(/-/g, "+").replace(/_/g, "/");
+    while (base64.length % 4) {
+      base64 += "=";
+    }
+    const signature = Uint8Array.from(Buffer.from(base64, "base64"));
 
-//   // 🚧 Optional: If the route doesn't match any known route, redirect
-//   const knownRoutes = [...publicRoutes, ...protectedRoutes];
-//   if (!knownRoutes.includes(pathname)) {
-//     return NextResponse.redirect(new URL("/new-application", req.url));
-//   }
+    const isValid = await crypto.subtle.verify("HMAC", key, signature, encoder.encode(signatureInput));
+    if (!isValid) return null;
 
-//   return NextResponse.next();
-// });
+    const payload = JSON.parse(base64UrlDecode(parts[1]));
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+      return null; // Token expired
+    }
 
-// export const config = {
-//   matcher: ["/((?!.+\\.[\\w]+$|_next|favicon.ico|api/).*)"],
-// };
+    return payload;
+  } catch (error) {
+    return null;
+  }
+}
 
+async function getSessionFromRequest(req: NextRequest) {
+  try {
+    const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
+    if (!token) {
+      return null;
+    }
+    return await verifyJWT(token);
+  } catch (error) {
+    return null;
+  }
+}
 
-
-
-// import { auth } from "../auth";
-// import { NextResponse } from "next/server";
-
-// // Routes any visitor can access:
-// const PUBLIC_ROUTES = new Set([
-//   "/",
-//   "/login",
-//   "/sign-up",
-//   "/forgot-password",
-//   "/reset-password",
-//   "/new-password",
-// ]);
-
-// // Routes ONLY authenticated users can access:
-// const PROTECTED_ROUTES = new Set([
-//   "/new-application",
-//   "/past-applications",
-//   "/company-details",
-//   "/personal-details",
-//   "/matching-grants",
-//   "/grant-database",
-// ]);
-
-// export default auth((req) => {
-//   const pathname = req.nextUrl.pathname;
-//   const isLoggedIn = !!req.auth;
-
-//   const isPublic = PUBLIC_ROUTES.has(pathname);
-//   const isProtected = PROTECTED_ROUTES.has(pathname);
-
-//   // 1️⃣ The landing page (/) ALWAYS accessible
-//   if (pathname === "/") {
-//     return NextResponse.next();
-//   }
-
-//   // 2️⃣ Logged-in users cannot visit login or sign-up
-//   if (
-//     isLoggedIn &&
-//     (pathname === "/login" || pathname === "/sign-up")
-//   ) {
-//     return NextResponse.redirect(new URL("/new-application", req.url));
-//   }
-
-//   // 3️⃣ Protected routes → redirect unauthenticated users to /login
-//   if (isProtected && !isLoggedIn) {
-//     const url = new URL("/login", req.url);
-//     url.searchParams.set("callbackUrl", pathname);
-//     return NextResponse.redirect(url);
-//   }
-
-//   // 4️⃣ Public routes → always allowed
-//   if (isPublic) {
-//     return NextResponse.next();
-//   }
-
-//   // 5️⃣ Unknown routes → redirect based on authentication state
-//   const knownRoutes = new Set([...PUBLIC_ROUTES, ...PROTECTED_ROUTES]);
-
-//   if (!knownRoutes.has(pathname)) {
-//     if (!isLoggedIn) {
-//       return NextResponse.redirect(new URL("/login", req.url));
-//     }
-//     return NextResponse.redirect(new URL("/new-application", req.url));
-//   }
-
-//   return NextResponse.next();
-// });
-
-// // 🔧 matcher must avoid intercepting _next, static assets, API routes, etc.
-// export const config = {
-//   matcher: [
-//     "/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)",
-//   ],
-// };
-
-
-
-import NextAuth from "next-auth";
-import { NextResponse } from "next/server";
-
-import authConfig from "../auth.config";
-import { apiAuthPrefix, DEFAULT_LOGIN_REDIRECT, authRoutes, publicRoutes } from "../routes";
-
-const { auth } = NextAuth(authConfig);
-
-export default auth((req) => {
+export default async function middleware(req: NextRequest) {
   const { nextUrl } = req;
-  
-  // 🔓 CRITICAL: Allow Stripe webhook routes to bypass authentication
-  // Stripe webhooks don't have user sessions and need to be processed
-  if (nextUrl.pathname.startsWith('/api/stripe/webhook')) {
+  const path = nextUrl.pathname;
+
+  // Allow auth API routes (session, logout, Google OAuth) without auth check
+  if (path.startsWith("/api/auth")) {
     return NextResponse.next();
   }
-  
-  const isLoggedIn = !!req.auth;
 
-  const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
+  if (path.startsWith("/api/stripe/webhook")) {
+    return NextResponse.next();
+  }
+
+  // Get session from cookie
+  const session = await getSessionFromRequest(req);
+  const isLoggedIn = !!session;
   const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
   const isAuthRoute = authRoutes.some((route) => new RegExp(route).test(nextUrl.pathname));
-
-  if (isApiAuthRoute) {
-    return NextResponse.next();
-  }
 
   if (isAuthRoute) {
     if (isLoggedIn) {
@@ -177,9 +102,8 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-})
+}
 
-// Optionally, don't invoke Middleware on some paths
 export const config = {
   matcher: ['/((?!.+\\.[\\w]+$|_next).*)', '/', '/(api|trpc)(.*)'],
-}
+};

@@ -195,17 +195,22 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { s3Client, S3_BUCKET } from "@/lib/s3-client";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { auth } from "../../../../auth";
+import { getServerSession } from "@/lib/auth-server";
 import { client } from "@/lib/prisma";
 import { CompanySchema } from "@/components/form/company";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getServerSession(req);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const userId = session.user.id;
+
+    if (!userId) {
+      console.error("Session user ID is missing");
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+    }
 
     const record = await client.user.findUnique({
       where: { id: userId },
@@ -251,13 +256,19 @@ export async function GET(req: NextRequest) {
     );
   } catch (err) {
     console.error("Error in GET /api/company:", err);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    if (err instanceof Error) {
+      console.error("Error details:", err.message, err.stack);
+    }
+    return NextResponse.json({ 
+      error: "Internal Server Error",
+      details: err instanceof Error ? err.message : "Unknown error"
+    }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getServerSession(req);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

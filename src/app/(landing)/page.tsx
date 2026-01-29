@@ -4,11 +4,11 @@ import Hero from "@/components/landing/hero";
 import HowItWorks from "@/components/landing/how-it-works";
 import Navbar from "@/components/landing/navbar";
 import PricingSection from "@/components/landing/pricing-section";
-import { auth } from "../../../auth";
+import { getServerSession } from "@/lib/auth-server";
 import { isUserPremium } from "@/app/actions/premium";
 
 export default async function LandingPage() {
-    const session = await auth();
+    const session = await getServerSession();
     let isSubscribed = false;
     
     if (session?.user?.id) {

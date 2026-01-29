@@ -13,7 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { signOut } from "next-auth/react";  // ✅ Use client-side signOut
+import { signOut } from "@/lib/auth-client-custom";
 import { useInitials } from "@/hooks/useInitials";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { DropDown } from "./ui/drop-down";
@@ -29,11 +29,8 @@ export const UserAvatar = ({ image, name }: UserWidgetProps) => {
 
   const onLogout = async () => {
     try {
-      // ✅ This properly clears cookies and redirects
-      await signOut({ 
-        callbackUrl: "/login",  // or "/sign-in"
-        redirect: true 
-      });
+      await signOut();
+      window.location.href = "/login";
     } catch (error) {
       console.error("Logout failed:", error);
     }

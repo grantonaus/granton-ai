@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, Suspense } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,8 +30,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 type SignUpData = z.infer<typeof SignUpSchema>;
 
-
-const SignUpPage = () => {
+const SignUpForm = () => {
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
   const [isPending, startTransition] = useTransition();
@@ -64,21 +63,25 @@ const SignUpPage = () => {
     setSuccess("");
 
     startTransition(async () => {
-      const data = await register(values);
+      try {
+        const data = await register(values);
 
-      if (data.error) {
-        setError(data.error);
-        reset();
-      } else if (data.success) {
-        setSuccess(data.success);
-
-        const res = await login(values, callbackUrl);
-
-        if (res?.error) {
-          setError("Registration successful, but failed to log in");
-        } else {
-          router.push("/company-details");
+        if (data.error) {
+          setError(data.error);
+          reset();
+        } else if (data.success) {
+          setSuccess("Account created successfully! Redirecting...");
+          // Small delay to show success message before redirect
+          setTimeout(() => {
+            // Registration already creates a session, so just redirect
+            // Use window.location for full page refresh to update session
+            window.location.href = callbackUrl || "/company-details";
+          }, 500);
         }
+      } catch (err) {
+        console.error("Registration error:", err);
+        setError("An unexpected error occurred. Please try again.");
+        reset();
       }
     });
   };
@@ -153,15 +156,31 @@ const SignUpPage = () => {
             )}
           />
 
+          {/* Show loading message during registration */}
+          {isPending && !error && !success && (
+            <div className="w-full bg-blue-500/10 p-3 rounded-md flex items-center gap-x-2 text-sm text-blue-400">
+              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Creating your account...</span>
+            </div>
+          )}
+
+          {/* Show error message */}
           {error && <FormError message={error} />}
+          
+          {/* Show success message */}
           {success && <FormSuccess message={success} />}
 
           <Button
             type="submit"
-            className="w-full h-10 font-bold text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 mt-2 rounded-md cursor-pointer"
+            className="w-full h-10 font-bold text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 mt-2 rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isPending}
           >
-            <Loader loading={isPending}>Sign Up</Loader>
+            <Loader loading={isPending}>
+              {isPending ? "Creating Account..." : "Sign Up"}
+            </Loader>
           </Button>
         </form>
       </Form>
@@ -187,6 +206,21 @@ const SignUpPage = () => {
         </Link>
       </div>
     </div>
+  );
+};
+
+const SignUpPage = () => {
+  return (
+    <Suspense fallback={
+      <div className="max-w-lg p-7 mt-14 rounded-xl bg-[#0f0f0f] border border-[#1C1C1C]">
+        <h5 className="font-black text-xl text-white">Create an account</h5>
+        <div className="mt-5">
+          <Loader loading={true}>Loading...</Loader>
+        </div>
+      </div>
+    }>
+      <SignUpForm />
+    </Suspense>
   );
 };
 

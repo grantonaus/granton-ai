@@ -1,10 +1,10 @@
 "use server";
 
-import { auth } from "../../../auth";
+import { getServerSession } from "@/lib/auth-server";
 import { hasActiveSubscription } from "@/lib/subscription";
 
 export async function isUserPremium() {
-  const session = await auth();
+  const session = await getServerSession();
   const user = session?.user;
 
   if (!user?.id) {

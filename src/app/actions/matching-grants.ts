@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "../../../auth";
+import { getServerSession } from "@/lib/auth-server";
 import { client } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
 import OpenAI from "openai";
@@ -171,7 +171,7 @@ export interface MatchingGrantsData {
 
 export async function getMatchingGrants(): Promise<MatchingGrantsData> {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return { grants: [], error: "Not authenticated" };
     }
@@ -200,6 +200,7 @@ export async function getMatchingGrants(): Promise<MatchingGrantsData> {
         targetCustomers: true,
         fundingStatus: true,
         country: true,
+        state: true,
       },
     });
 
@@ -262,9 +263,26 @@ export async function getMatchingGrants(): Promise<MatchingGrantsData> {
 
     // Take top matches (sorted by similarity descending from RPC)
     // Get more candidates to filter from
-    const candidateMatches = (matches || []).slice(0, Math.max(MIN_MATCHES_REQUIRED * 3, 100));
+    let candidateMatches = (matches || []).slice(
+      0,
+      Math.max(MIN_MATCHES_REQUIRED * 3, 100)
+    );
 
-    console.log(`[MATCH API] Checking eligibility for ${candidateMatches.length} candidate matches`);
+    // If user has a selected state, only keep grants for that state or National
+    const userState = dbUser.state?.trim();
+    if (userState) {
+      const normalizedUserState = userState.toLowerCase();
+      candidateMatches = candidateMatches.filter((g: any) => {
+        const grantState = (g.state ?? "").toString().trim().toLowerCase();
+        if (!grantState) return false;
+        if (grantState === "national") return true;
+        return grantState === normalizedUserState;
+      });
+    }
+
+    console.log(
+      `[MATCH API] Checking eligibility for ${candidateMatches.length} candidate matches`
+    );
 
     // Filter out grants with incompatible hard requirements
     const eligibleMatches = [];

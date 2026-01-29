@@ -1,12 +1,12 @@
 "use server";
 
-import { auth } from "../../../auth";
+import { getServerSession } from "@/lib/auth-server";
 import { client } from "@/lib/prisma";
 import type { PersonalDetailsData } from "@/components/PersonalDetails";
 
 export async function getPersonalDetails(): Promise<PersonalDetailsData | null> {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return null;
     }

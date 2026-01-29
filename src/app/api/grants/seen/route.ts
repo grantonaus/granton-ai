@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { auth } from "../../../../../auth";
+import { getServerSession } from "@/lib/auth-server";
 import { supabase } from "@/lib/supabase";
 
 export async function POST(req: Request) {
-  const session = await auth();
+  const session = await getServerSession();
   if (!session?.user) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
 
   const { grantId } = await req.json();

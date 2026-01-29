@@ -6,12 +6,12 @@ import { client } from "@/lib/prisma";
 import { PersonalSchema, PersonalDetailsData } from "@/components/form/personal-schema";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { auth } from "../../../auth";
+import { getServerSession } from "@/lib/auth-server";
 
 
 export async function savePersonalDetails(formData: FormData) {
 
-    const session = await auth();
+    const session = await getServerSession();
 
   if (!session?.user?.id) {
     throw new Error("Not authenticated");

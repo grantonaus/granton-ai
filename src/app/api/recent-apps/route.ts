@@ -1,7 +1,7 @@
 // app/api/recent-apps/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { client } from "@/lib/prisma";
-import { auth } from "../../../../auth";
+import { getServerSession } from "@/lib/auth-server";
 
 interface RecentAppResponse {
   id: string;
@@ -12,7 +12,7 @@ interface RecentAppResponse {
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -1,10 +1,10 @@
 "use server";
 
 import { client } from "@/lib/prisma";
-import { auth } from "../../../auth";
+import { getServerSession } from "@/lib/auth-server";
 
 export async function isProfileComplete() {
-  const session = await auth();
+  const session = await getServerSession();
   const user = session?.user;
 
   if (!user) {

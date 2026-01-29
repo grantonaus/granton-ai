@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Ellipsis, LogOut, Plus } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut } from "@/lib/auth-client-custom";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -272,10 +272,8 @@ export function Menu({
                   <AlertDialogAction
                     onClick={async () => {
                       try {
-                        await signOut({
-                          callbackUrl: "/login",
-                          redirect: true
-                        });
+                        await signOut();
+                        window.location.href = "/login";
                       } catch (error) {
                         console.error("Logout failed:", error);
                       }

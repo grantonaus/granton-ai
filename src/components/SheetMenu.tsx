@@ -1,5 +1,5 @@
 import SheetMenuClient from "./SheetMenuClient";
-import { auth } from "../../auth";
+// Client component - uses useCurrentUser hook
 import { useCurrentUser } from "@/hooks/user";
 
 export default function SheetMenu() {

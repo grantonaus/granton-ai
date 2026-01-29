@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader } from "./Loader";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client-custom";
 import FileUpload from "./FileUpload";
 import Spinner from "./Spinner";
 import { useRouter } from "next/navigation";

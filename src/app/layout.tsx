@@ -1,8 +1,7 @@
 // app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { auth } from "../../auth";
-import { SessionProvider } from "next-auth/react";
+// Better Auth doesn't require SessionProvider - it handles sessions automatically
 import { Toaster } from "sonner";
 
 
@@ -75,21 +74,17 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
-
   return (
-    <SessionProvider session={session}>
-      <html lang="en" className="h-full" suppressHydrationWarning>
-        <head>
-          <meta charSet="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-         
-        </head>
-        <body className="h-full antialiased" suppressHydrationWarning>
-          <Toaster position="bottom-center" richColors />
-          {children}
-        </body>
-      </html>
-    </SessionProvider>
+    <html lang="en" className="h-full" suppressHydrationWarning>
+      <head>
+        <meta charSet="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+       
+      </head>
+      <body className="h-full antialiased" suppressHydrationWarning>
+        <Toaster position="bottom-center" richColors />
+        {children}
+      </body>
+    </html>
   );
 }

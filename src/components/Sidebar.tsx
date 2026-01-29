@@ -6,11 +6,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { Menu } from "./Menu";
 import { client } from "@/lib/prisma";
-import { auth } from "../../auth";
+import { getServerSession } from "@/lib/auth-server";
 import { hasActiveSubscription } from "@/lib/subscription";
 
 export async function Sidebar() {
-  const session = await auth();
+  const session = await getServerSession();
   const userId = session?.user?.id ?? null;
 
   // let profileComplete = false;

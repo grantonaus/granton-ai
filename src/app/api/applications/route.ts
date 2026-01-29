@@ -2,18 +2,23 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { client } from "@/lib/prisma";
-import { auth } from "../../../../auth";
+import { getServerSession } from "@/lib/auth-server";
 
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getServerSession(req);
     if (!session || !session.user?.id) {
-
+      console.error("Unauthorized: No session or user ID");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const userId = session.user.id;
+
+    if (!userId) {
+      console.error("Session user ID is missing");
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+    }
 
 
     const grants = await client.grant.findMany({
@@ -41,7 +46,11 @@ export async function GET() {
   } catch (err: unknown) {
     console.error("Error fetching applications:", err);
     if (err instanceof Error) {
-      return NextResponse.json({ error: err.message }, { status: 500 });
+      console.error("Error details:", err.message, err.stack);
+      return NextResponse.json({ 
+        error: err.message,
+        details: err.stack 
+      }, { status: 500 });
     }
     return NextResponse.json({ error: "An unknown error occurred" }, { status: 500 });
   }
@@ -51,7 +60,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getServerSession(request);
     if (!session || !session.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

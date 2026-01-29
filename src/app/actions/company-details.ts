@@ -1,12 +1,12 @@
 "use server";
 
-import { auth } from "../../../auth";
+import { getServerSession } from "@/lib/auth-server";
 import { client } from "@/lib/prisma";
 import type { CompanyDetailsData } from "@/components/CompanyDetails";
 
 export async function getCompanyDetails(): Promise<CompanyDetailsData | null> {
   try {
-    const session = await auth();
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return null;
     }

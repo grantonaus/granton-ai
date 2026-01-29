@@ -1,4 +1,4 @@
-import { useSession } from "next-auth/react";
+// Removed - using useCurrentUser instead
 import { UserWidget } from "./UserWidget";
 import { useCurrentUser } from "@/hooks/user";
 import SheetMenu from "./SheetMenu";
