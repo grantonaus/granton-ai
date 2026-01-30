@@ -7,6 +7,7 @@ import { PersonalSchema, PersonalDetailsData } from "@/components/form/personal-
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "@/lib/auth-server";
+import { createSession } from "@/lib/auth-custom";
 
 
 export async function savePersonalDetails(formData: FormData) {
@@ -47,7 +48,8 @@ export async function savePersonalDetails(formData: FormData) {
     },
   });
 
-  revalidatePath("/personal-details");
+  await createSession(userId);
+  revalidatePath("/", "layout");
 
   redirect("/personal-details");
 }

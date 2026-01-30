@@ -5,6 +5,7 @@ import { PersonalProvider } from "@/contexts/PersonalContext";
 import { client } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth-server";
 import { DynamicNavbar } from "@/components/DynamicNavbar";
+import { SubscriptionStatusRefresher } from "@/components/SubscriptionStatusRefresher";
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +32,7 @@ export default async function ExploreLayout({ children }: ExploreLayoutProps) {
   // 2) Wrap in PersonalProvider with the server‐computed flag
   return (
     <PersonalProvider initialHasPersonalDetails={profileComplete} initialHasCompanyDetails={companyComplete}>
+      <SubscriptionStatusRefresher />
       <Sidebar/>
       <main
         className={cn(

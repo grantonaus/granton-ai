@@ -35,8 +35,7 @@ export default function GrantTestSubscriptionPage() {
       }
 
       toast.success("Test subscription granted successfully!");
-      
-      // Redirect to grant database after a short delay
+      router.refresh(); // Update layout/sidebar subscription status
       setTimeout(() => {
         router.push("/grant-database");
       }, 1500);

@@ -43,12 +43,12 @@ export default function GrantDatabaseClient({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Show toast on successful subscription
+  // Show toast on successful subscription and refresh layout so sidebar shows new status
   useEffect(() => {
     const subscriptionStatus = searchParams.get("subscription");
     if (subscriptionStatus === "success") {
       toast.success("Subscription successful! Welcome to Granton AI Premium.");
-      // Clean up the URL parameter
+      router.refresh(); // Re-fetch server components (Sidebar) so subscription status updates
       const newSearchParams = new URLSearchParams(searchParams.toString());
       newSearchParams.delete("subscription");
       const newUrl = newSearchParams.toString()

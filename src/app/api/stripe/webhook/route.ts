@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
+import { revalidatePath } from 'next/cache';
 import Stripe from 'stripe';
 import { client } from '@/lib/prisma';
 
@@ -304,6 +305,7 @@ export async function POST(req: NextRequest) {
         });
 
         console.log(`✅ invoice.payment_succeeded handled for user ${subRecord.userId}, status=${status}`);
+        revalidatePath('/', 'layout'); // So layout/sidebar show fresh subscription on next load
         break;
       }
 
@@ -311,6 +313,7 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         await upsertSubscriptionFromStripeSub(subscription);
+        revalidatePath('/', 'layout');
         break;
       }
 
@@ -332,6 +335,7 @@ export async function POST(req: NextRequest) {
         });
 
         console.log(`✅ customer.subscription.deleted handled, user ${subRecord.userId} subscription deleted`);
+        revalidatePath('/', 'layout');
         break;
       }
 

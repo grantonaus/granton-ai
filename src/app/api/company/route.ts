@@ -198,6 +198,7 @@ import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getServerSession } from "@/lib/auth-server";
 import { client } from "@/lib/prisma";
 import { CompanySchema } from "@/components/form/company";
+import { createSession } from "@/lib/auth-custom";
 
 export async function GET(req: NextRequest) {
   try {
@@ -331,6 +332,8 @@ export async function POST(req: NextRequest) {
         companyComplete: true,
       },
     });
+
+    await createSession(userId);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
