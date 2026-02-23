@@ -1,7 +1,7 @@
 // components/CompanyDetails.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -60,6 +60,8 @@ const companySchema = z.object({
 
 export type CompanyDetailsData = z.infer<typeof companySchema>;
 
+const COMPANY_DRAFT_STORAGE_KEY = "company-details-draft";
+
 const blankCompany: CompanyDetailsData = {
   website_url: "",
   company_name: "",
@@ -85,6 +87,7 @@ export default function CompanyDetails({
   onSave,
   defaultValues,
 }: CompanyDetailsProps) {
+  void onSave;
 
   const { data: session } = useSession();
 
@@ -113,6 +116,18 @@ export default function CompanyDetails({
     resolver: zodResolver(companySchema),
     defaultValues: defaultValues ?? blankCompany,
   });
+
+  const hasHydratedForm = useRef(false);
+  const persistedDraft = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(COMPANY_DRAFT_STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw) as Partial<CompanyDetailsData>;
+    } catch {
+      return null;
+    }
+  }, []);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -144,6 +159,27 @@ export default function CompanyDetails({
   // Only fetch data if defaultValues are not provided (for backward compatibility)
   // If defaultValues are provided, use them directly - this prevents double fetching
   useEffect(() => {
+    if (hasHydratedForm.current) return;
+
+    const draftValues = persistedDraft;
+    const hasDraftData =
+      !!draftValues &&
+      Object.values(draftValues).some((value) =>
+        typeof value === "string" ? value.trim().length > 0 : Array.isArray(value) ? value.length > 0 : !!value
+      );
+
+    if (hasDraftData) {
+      const merged = {
+        ...blankCompany,
+        ...(defaultValues ?? {}),
+        ...draftValues,
+      };
+      form.reset(merged);
+      setExistingAttachments(merged.attachments ?? []);
+      hasHydratedForm.current = true;
+      return;
+    }
+
     // If defaultValues are provided, use them and skip fetching
     if (defaultValues && Object.keys(defaultValues).length > 0) {
       const formData = {
@@ -163,6 +199,7 @@ export default function CompanyDetails({
       };
       form.reset(formData);
       setExistingAttachments(defaultValues.attachments ?? []);
+      hasHydratedForm.current = true;
       return;
     }
 
@@ -201,6 +238,7 @@ export default function CompanyDetails({
         });
 
         setExistingAttachments(data.attachments ?? []);
+        hasHydratedForm.current = true;
       } catch (err) {
         console.error("Error fetching company data:", err);
       }
@@ -208,7 +246,19 @@ export default function CompanyDetails({
 
     fetchCompanyData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultValues]);
+  }, [defaultValues, form, persistedDraft]);
+
+  useEffect(() => {
+    const subscription = form.watch((values) => {
+      try {
+        window.localStorage.setItem(COMPANY_DRAFT_STORAGE_KEY, JSON.stringify(values));
+      } catch {
+        // Ignore storage write errors to avoid blocking form usage.
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   const router = useRouter();
 
@@ -324,6 +374,11 @@ export default function CompanyDetails({
       console.log("✅  Company details + attachments saved successfully");
       toast.success("Company details saved successfully!");
       setFilesToUpload([]);
+      try {
+        window.localStorage.removeItem(COMPANY_DRAFT_STORAGE_KEY);
+      } catch {
+        // Ignore storage delete errors.
+      }
       router.refresh();
       setExistingAttachments(finalAttachments);
     } catch (err) {
@@ -404,11 +459,11 @@ export default function CompanyDetails({
                     <FormLabel>State</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      value={field.value ?? ""}
+                      value={field.value || undefined}
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select state" />
+                          <SelectValue placeholder="Please select" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -542,11 +597,11 @@ export default function CompanyDetails({
                   </FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value || undefined}
                   >
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select objective" />
+                        <SelectValue placeholder="Please select" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -615,11 +670,11 @@ export default function CompanyDetails({
                   <FormLabel>Current Stage of Product / Solution</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value || undefined}
                   >
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select stage" />
+                        <SelectValue placeholder="Please select" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

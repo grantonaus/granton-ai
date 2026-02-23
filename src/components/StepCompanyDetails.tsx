@@ -190,11 +190,11 @@ export default function StepCompanyDetails({
                     <FormLabel>State</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      value={field.value ?? ""}
+                      value={field.value || undefined}
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select state" />
+                          <SelectValue placeholder="Please select" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -261,10 +261,13 @@ export default function StepCompanyDetails({
                   <FormLabel>
                     What is your main objective with this project related to funding?
                   </FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || undefined}
+                  >
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select objective" />
+                        <SelectValue placeholder="Please select" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -329,10 +332,13 @@ export default function StepCompanyDetails({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Current Stage of Product / Solution</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || undefined}
+                  >
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select stage" />
+                        <SelectValue placeholder="Please select" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

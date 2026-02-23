@@ -1,12 +1,12 @@
 // app/api/profile-data/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { client } from "@/lib/prisma";
-import { getServerSession } from "@/lib/auth-server";
+import { auth } from "../../../../auth";
 import { z } from "zod";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await auth(); // NextAuth’s server helper
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -60,7 +60,7 @@ const PersonalSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
