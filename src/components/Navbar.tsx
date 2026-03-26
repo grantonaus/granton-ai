@@ -20,7 +20,7 @@ export const Navbar = ({ title, }: NavbarProps) => {
   return (
 
 
-    <header className="sticky top-0 z-20 w-full h-24 bg-[#0F0F0F] backdrop-blur-sm lg:hidden">
+    <header className="sticky top-0 z-20 h-24 w-full shrink-0 bg-[#0F0F0F] backdrop-blur-sm lg:hidden">
       <div className="px-5 max-w-[1000px] mx-auto flex pt-8 items-center">
         <div className="flex items-center space-x-4 lg:space-x-0">
           <SheetMenu />

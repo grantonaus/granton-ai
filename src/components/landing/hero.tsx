@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { FEATURE_GRANT_WRITER_ENABLED } from "@/constants/feature-flags";
 
 export default function Hero() {
     return (
@@ -42,8 +43,10 @@ export default function Hero() {
                 transition={{ duration: 0.6, delay: 0.15 }}
                 className="max-w-3xl font-medium text-[19px] sm:text-xl text-[#8e8e8e] sm:leading-normal drop-shadow-[0_2px_10px_rgba(0,0,0,0.2)]"
             >
-                Stop wasting time searching through hundreds of grant programs.
-                Our AI-powered platform instantly matches your business with the most relevant federal and state Australian grants.
+                Stop wasting time searching through hundreds of grant programs.{" "}
+                {FEATURE_GRANT_WRITER_ENABLED
+                    ? "Our AI-powered platform matches your business to the most relevant federal and state grants—and helps you draft applications when you’re ready."
+                    : "Search federal and state opportunities in one place—then match your business to what you can actually apply for."}
             </motion.p>
 
             {/* CTA Buttons */}

@@ -287,7 +287,7 @@ export default function StepGrantDetails({
         </Form>
       </div>
 
-      <div className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8">
+      <div className="shrink-0 border-t border-white/[0.06] bg-[#0F0F0F] pt-4 pb-6 md:pb-8">
         <div className="max-w-[1200px] mx-auto flex justify-between gap-4">
           <Button
             variant="outline"

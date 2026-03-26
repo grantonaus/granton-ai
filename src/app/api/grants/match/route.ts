@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { User } from "@prisma/client";
 import { getServerSession } from "@/lib/auth-server";
 import { client } from "@/lib/prisma";
 import { supabase } from "@/lib/supabase";
@@ -8,8 +9,20 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// Build company text for embedding
-function buildCompanyProfile(u: any): string {
+type CompanyProfileFields = Pick<
+  User,
+  | "companyName"
+  | "companyBackground"
+  | "product"
+  | "competitorsUniqueValueProposition"
+  | "currentStage"
+  | "mainObjective"
+  | "targetCustomers"
+  | "fundingStatus"
+  | "country"
+>;
+
+function buildCompanyProfile(u: CompanyProfileFields): string {
   // Build a comprehensive profile that accurately describes the company
   return [
     u.companyName && `Company: ${u.companyName}`,

@@ -48,10 +48,7 @@ export default function NewApplicationPage() {
       }
 
       try {
-        const finalAttachments = await processAttachments(
-          data.attachments || [],
-          session.user.id
-        );
+        const finalAttachments = await processAttachments(data.attachments || []);
 
         const updatedCompany: CompanyDetailsData = {
           ...data,
@@ -223,10 +220,10 @@ export default function NewApplicationPage() {
   const isProfileComplete = hasPersonalDetails && hasCompanyDetails;
 
   return (
-    <div className="w-full min-h-full bg-[#0F0F0F] overscroll-none mt-0">
-      <div className="sticky top-0 z-30 bg-[#0d0d0d] overscroll-none mb-2">
+    <div className="mt-0 flex h-full min-h-0 w-full flex-1 flex-col overscroll-none bg-[#0F0F0F]">
+      <div className="z-30 shrink-0 bg-[#0d0d0d]">
         <div
-          className={`px-5 lg:px-8 max-w-[1400px] mx-auto pb-2 lg:pb-4 ${
+          className={`mx-auto max-w-[1400px] px-5 pb-2 lg:px-8 lg:pb-4 ${
             showBanner ? "pt-0 lg:pt-8" : "pt-0 lg:pt-0"
           }`}
         >
@@ -237,8 +234,8 @@ export default function NewApplicationPage() {
         </div>
       </div>
 
-      <div className="flex flex-col h-full px-5 lg:px-8 max-w-[1400px] mx-auto">
-        <div className="flex-1 overflow-hidden">
+      <div className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 flex-col px-5 lg:px-8">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {currentStep === 1 && (
             <StepGrantDetails
               defaultValues={grantDetails}

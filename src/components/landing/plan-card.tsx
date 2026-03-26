@@ -135,9 +135,9 @@ const PlanCard: React.FC<PlanCardProps> = ({
             onClick={async () => {
               setIsLoading(true);
               
-              // If user is already subscribed, redirect to new-application
+              // If user is already subscribed, redirect to app home
               if (isSubscribed) {
-                router.push('/new-application');
+                router.push('/grant-database');
                 return;
               }
 

@@ -46,12 +46,10 @@ const blankPersonal: PersonalDetailsData = {
 };
 
 interface PersonalDetailsProps {
-    onSave: (data: PersonalDetailsData) => void;
     defaultValues?: Partial<PersonalDetailsData>;
 }
 
 export default function PersonalDetails({
-    onSave,
     defaultValues,
 }: PersonalDetailsProps) {
     const form = useForm<PersonalDetailsData>({
@@ -69,6 +67,7 @@ export default function PersonalDetails({
           const resp = await fetch("/api/profile", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify(values),
           });
     
@@ -274,7 +273,7 @@ export default function PersonalDetails({
                 </Form>
             </div>
 
-            <div className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8">
+            <div className="shrink-0 border-t border-white/[0.06] bg-[#0F0F0F] pt-4 pb-6 md:pb-8">
                 <div className="w-full px-8 flex justify-between gap-4">
                     <Button
                         onClick={form.handleSubmit(handleSave)}

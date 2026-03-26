@@ -33,15 +33,16 @@ export default async function ExploreLayout({ children }: ExploreLayoutProps) {
   return (
     <PersonalProvider initialHasPersonalDetails={profileComplete} initialHasCompanyDetails={companyComplete}>
       <SubscriptionStatusRefresher />
-      <Sidebar/>
+      <Sidebar />
       <main
         className={cn(
-          "h-[100dvh] bg-zinc-50 dark:bg-black transition-[margin-left] ease-in-out duration-300 lg:ml-80 flex flex-col"
+          "flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#0F0F0F]",
+          "transition-[margin-left] duration-300 ease-in-out lg:ml-80 lg:border-l lg:border-white/[0.06]"
         )}
-        style={{ resize: 'none' }}
+        style={{ resize: "none" }}
       >
         <DynamicNavbar />
-        <div className="flex-1 overflow-auto">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {children}
         </div>
       </main>

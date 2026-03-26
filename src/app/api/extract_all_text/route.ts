@@ -1,19 +1,25 @@
-
-// File: /app/api/extract_all_text/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import fetch from "node-fetch";
 import * as cheerio from "cheerio";
 import pdfParse from "pdf-parse";
+import { requireAuth } from "@/lib/api-auth";
+import { rateLimit } from "@/lib/rate-limit";
+import {
+  assertContentLengthOk,
+  assertFileSizeOk,
+  assertUrlSafeForServerFetch,
+  MAX_FORM_FILE_BYTES,
+} from "@/lib/url-safety";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-// ─── Helper: Scrape plain text from a URL ───────────────────────────────
 async function extractTextFromWeb(url: string): Promise<string> {
-  console.log(`[extractTextFromWeb] Fetching URL: ${url}`);
-  const res = await fetch(url);
+  const safe = await assertUrlSafeForServerFetch(url);
+  console.log(`[extractTextFromWeb] Fetching URL: ${safe.href}`);
+  const res = await fetch(safe.href);
   if (!res.ok) {
-    const msg = `Failed to fetch ${url} (status ${res.status})`;
+    const msg = `Failed to fetch (status ${res.status})`;
     console.error(`[extractTextFromWeb] ${msg}`);
     throw new Error(msg);
   }
@@ -28,9 +34,11 @@ async function extractTextFromWeb(url: string): Promise<string> {
     .trim();
 }
 
-// ─── Helper: Extract plain text from a PDF File ──────────────────────────
 async function extractTextFromPDF(file: File): Promise<string> {
-  console.log(`[extractTextFromPDF] Parsing PDF: ${file.name} (${file.size} bytes)`);
+  assertFileSizeOk(file, MAX_FORM_FILE_BYTES);
+  console.log(
+    `[extractTextFromPDF] Parsing PDF: ${file.name} (${file.size} bytes)`
+  );
   const buffer = Buffer.from(await file.arrayBuffer());
   const parsed = await pdfParse(buffer);
   const text = parsed.text || "";
@@ -38,30 +46,47 @@ async function extractTextFromPDF(file: File): Promise<string> {
   return text.trim();
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request);
+  if (!auth.ok) return auth.response;
+
+  try {
+    assertContentLengthOk(request, 50 * 1024 * 1024);
+  } catch {
+    return NextResponse.json({ error: "Request body too large" }, { status: 413 });
+  }
+
+  const rl = rateLimit(`extract_all_text:${auth.user.id}`, 40, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
+  }
+
   console.log("[/api/extract_all_text] → Received request");
   try {
     const form = await request.formData();
 
-    // ── Step 2 grant fields ─────────────────────────────────────────────
     const guidelinesFile = form.get("guidelinesFile") as File;
     const guidelinesLink = form.get("guidelinesLink")?.toString() || "";
     const applicationFormFile = form.get("applicationFormFile") as File;
-    const applicationFormLink = form.get("applicationFormLink")?.toString() || "";
+    const applicationFormLink =
+      form.get("applicationFormLink")?.toString() || "";
 
-    // ── Step 1 company text fields ──────────────────────────────────────
     const websiteUrl = form.get("website_url") as string;
     const companyName = form.get("company_name") as string;
     const country = form.get("country") as string;
     const companyBackground = form.get("company_background") as string;
     const product = form.get("product") as string;
-    const competitorsUVP = form.get("competitors_unique_value_proposition") as string;
+    const competitorsUVP = form.get(
+      "competitors_unique_value_proposition"
+    ) as string;
     const currentStage = form.get("current_stage") as string;
     const mainObjective = form.get("main_objective") as string;
     const targetCustomers = form.get("target_customers") as string;
     const fundingStatus = form.get("funding_status") as string;
 
-    // ── Step 1 attachments (possibly multiple) ───────────────────────────
     const companyAttachmentTexts: string[] = [];
     let i = 0;
     while (true) {
@@ -71,21 +96,38 @@ export async function POST(request: Request) {
         const file = form.get(fileKey) as File;
         try {
           const pdfText = await extractTextFromPDF(file);
-          companyAttachmentTexts.push(`COMPANY ATTACHMENT (PDF: ${file.name}):\n${pdfText}`);
-        } catch (e: any) {
-          console.error(`[extract_all_text] Error parsing companyAttachmentFile_${i}:`, e);
-          companyAttachmentTexts.push(`COMPANY ATTACHMENT (PDF: ${file.name}) parse error: ${e.message}`);
+          companyAttachmentTexts.push(
+            `COMPANY ATTACHMENT (PDF: ${file.name}):\n${pdfText}`
+          );
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.error(
+            `[extract_all_text] Error parsing companyAttachmentFile_${i}:`,
+            e
+          );
+          companyAttachmentTexts.push(
+            `COMPANY ATTACHMENT (PDF: ${file.name}) parse error: ${msg}`
+          );
         }
         i++;
         continue;
-      } else if (form.has(urlKey)) {
+      }
+      if (form.has(urlKey)) {
         const s3url = form.get(urlKey) as string;
         try {
           const webText = await extractTextFromWeb(s3url);
-          companyAttachmentTexts.push(`COMPANY ATTACHMENT (URL: ${s3url}):\n${webText}`);
-        } catch (e: any) {
-          console.error(`[extract_all_text] Error fetching companyAttachmentUrl_${i}:`, e);
-          companyAttachmentTexts.push(`COMPANY ATTACHMENT (URL: ${s3url}) fetch error: ${e.message}`);
+          companyAttachmentTexts.push(
+            `COMPANY ATTACHMENT (URL: ${s3url}):\n${webText}`
+          );
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.error(
+            `[extract_all_text] Error fetching companyAttachmentUrl_${i}:`,
+            e
+          );
+          companyAttachmentTexts.push(
+            `COMPANY ATTACHMENT (URL: ${s3url}) fetch error: ${msg}`
+          );
         }
         i++;
         continue;
@@ -93,10 +135,8 @@ export async function POST(request: Request) {
       break;
     }
 
-    // ── Step 3 budget text field ────────────────────────────────────────
     const allocationDetails = form.get("allocationDetails") as string;
 
-    // ── Now extract grant guidance text ─────────────────────────────────
     let guidelinesText = "";
     if (guidelinesFile && guidelinesFile.size > 0) {
       guidelinesText = await extractTextFromPDF(guidelinesFile);
@@ -104,7 +144,6 @@ export async function POST(request: Request) {
       guidelinesText = await extractTextFromWeb(guidelinesLink);
     }
 
-    // ── Extract application form text ───────────────────────────────────
     let applicationFormText = "";
     if (applicationFormFile && applicationFormFile.size > 0) {
       applicationFormText = await extractTextFromPDF(applicationFormFile);
@@ -112,10 +151,8 @@ export async function POST(request: Request) {
       applicationFormText = await extractTextFromWeb(applicationFormLink);
     }
 
-    // ── Build combined input sections ───────────────────────────────────
     const combinedSections: string[] = [];
 
-    // 1) Company details (text)
     combinedSections.push(`---\nCOMPANY DETAILS:
 - Name: ${companyName}
 - Website: ${websiteUrl}
@@ -128,39 +165,38 @@ export async function POST(request: Request) {
 - Target Customers: ${targetCustomers}
 - Funding Status: ${fundingStatus}`);
 
-    // 2) Company attachments (if any)
     if (companyAttachmentTexts.length > 0) {
-      combinedSections.push(`---\nCOMPANY ATTACHMENTS:\n${companyAttachmentTexts.join("\n\n")}`);
+      combinedSections.push(
+        `---\nCOMPANY ATTACHMENTS:\n${companyAttachmentTexts.join("\n\n")}`
+      );
     }
 
-    // 3) Budget allocation details
     combinedSections.push(`---\nBUDGET DETAILS:
 - Allocation Details: ${allocationDetails}`);
 
-    // 4) Grant guidelines text
     if (guidelinesText.trim()) {
       combinedSections.push(`---\nGRANT GUIDELINES TEXT:\n${guidelinesText}`);
     }
 
-    // 5) Application form text
     if (applicationFormText.trim()) {
-      combinedSections.push(`---\nAPPLICATION FORM TEXT:\n${applicationFormText}`);
+      combinedSections.push(
+        `---\nAPPLICATION FORM TEXT:\n${applicationFormText}`
+      );
     }
 
     const allText = combinedSections.join("\n\n");
     console.log("[/api/extract_all_text] Combined text length:", allText.length);
 
-    // ── Return JSON with every extracted bit ──────────────────────────────
     return NextResponse.json(
       {
         allUserEnteredText: allText,
       },
       { status: 200 }
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[/api/extract_all_text] Unexpected error:", err);
     return NextResponse.json(
-      { error: "Internal Server Error", details: err.message || String(err) },
+      { error: "Internal Server Error" },
       { status: 500 }
     );
   }

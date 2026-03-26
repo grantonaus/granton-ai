@@ -1,4 +1,3 @@
-// app/api/profile-data/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { client } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth-server";
@@ -41,11 +40,12 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error("Error in GET /api/profile:", err);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
-
-
 
 const PersonalSchema = z.object({
   primary_first_name: z.string().min(1),
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(req);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const userId = session.user.id;
 
@@ -94,7 +94,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("Error in POST /api/profile-data:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error("Error in POST /api/profile:", err);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

@@ -34,7 +34,7 @@ export const login = async (
 
     return {
       success: true,
-      callbackUrl: callbackUrl || "/new-application",
+      callbackUrl: callbackUrl || "/grant-database",
     };
   } catch (error) {
     console.error("Login Error:", error);

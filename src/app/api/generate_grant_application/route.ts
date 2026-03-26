@@ -2,6 +2,9 @@ import { openai } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { requireAuth } from "@/lib/api-auth";
+import { rateLimit } from "@/lib/rate-limit";
+import { assertContentLengthOk, MAX_JSON_BODY_BYTES } from "@/lib/url-safety";
 
 const RequestSchema = z.object({
   combinedText: z.string().min(1),
@@ -14,7 +17,23 @@ const RequestSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  // parse & validate
+  const auth = await requireAuth(request);
+  if (!auth.ok) return auth.response;
+
+  try {
+    assertContentLengthOk(request, MAX_JSON_BODY_BYTES);
+  } catch {
+    return NextResponse.json({ error: "Request body too large" }, { status: 413 });
+  }
+
+  const rl = rateLimit(`generate_grant_application:${auth.user.id}`, 20, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -152,9 +171,9 @@ Use natural, professional English. Your task is to generate clear, persuasive, a
       ],
     });
     bodyText = appRes.text.trim();
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Application generation failed:", err);
-    return NextResponse.json({ error: "Generation failed", details: err.message }, { status: 502 });
+    return NextResponse.json({ error: "Generation failed" }, { status: 502 });
   }
 
   // 5) return title + text

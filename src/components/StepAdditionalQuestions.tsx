@@ -456,7 +456,10 @@ export default function AdditionalQuestions({
           </div>
         </div>
       </div>
-      <div ref={footerRef} className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8 flex-shrink-0">
+      <div
+        ref={footerRef}
+        className="shrink-0 border-t border-white/[0.06] bg-[#0F0F0F] pt-4 pb-6 md:pb-8"
+      >
         <div className="flex justify-between gap-4">
           <Button
             variant="outline"

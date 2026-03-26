@@ -31,7 +31,7 @@ import FileUpload from "./FileUpload";
 import Spinner from "./Spinner";
 import { useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
-
+import { buildPublicS3ObjectUrl } from "@/lib/s3-public-url";
 
 const companySchema = z.object({
   website_url: z.string().refine(val => /^((https?:\/\/)?[\w.-]+\.[a-zA-Z]{2,})$/.test(val), {
@@ -78,17 +78,12 @@ const blankCompany: CompanyDetailsData = {
 };
 
 interface CompanyDetailsProps {
-  onSave: (data: CompanyDetailsData) => void;
-
   defaultValues?: Partial<CompanyDetailsData>;
 }
 
 export default function CompanyDetails({
-  onSave,
   defaultValues,
 }: CompanyDetailsProps) {
-  void onSave;
-
   const { data: session } = useSession();
 
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
@@ -208,6 +203,7 @@ export default function CompanyDetails({
       try {
         const response = await fetch("/api/company", {
           cache: "no-cache",
+          credentials: "include",
         });
 
         if (!response.ok) {
@@ -245,7 +241,6 @@ export default function CompanyDetails({
     }
 
     fetchCompanyData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultValues, form, persistedDraft]);
 
   useEffect(() => {
@@ -266,44 +261,31 @@ export default function CompanyDetails({
 
   async function onSubmit(values: CompanyDetailsData) {
     setIsSaving(true);
-    console.log("▶️  onSubmit triggered; form values:", values);
-    console.log("    existingAttachments:", existingAttachments);
-    console.log("    filesToUpload (File objects):", filesToUpload);
 
     try {
       const uploadedAttachments: { name: string; url: string; key: string }[] =
         [];
 
       for (const file of filesToUpload) {
-        console.log("📁  Processing file:", file.name);
-
         if (!session?.user?.id) {
-          console.warn("⚠️  No session.user.id – aborting upload");
           toast.error("You must be logged in to upload files");
           setIsSaving(false);
           return;
         }
-        const userId = session.user.id;
         const fileName = file.name;
 
         const presignUrl = `/api/s3-upload-url?fileName=${encodeURIComponent(
           fileName
-        )}&userId=${encodeURIComponent(userId)}`;
-        console.log("    ▶️  Fetching presign URL from:", presignUrl);
+        )}`;
 
-        const presignRes = await fetch(presignUrl);
-        console.log("    ↩️  presignRes.status:", presignRes.status);
+        const presignRes = await fetch(presignUrl, { credentials: "include" });
 
         if (!presignRes.ok) {
-          const errText = await presignRes.text().catch(() => "(no text)");
-          console.error("❌  Failed to get presigned URL:", errText);
           toast.error(`Could not get upload URL for ${fileName}`);
           continue;
         }
 
         const { uploadUrl, key } = await presignRes.json();
-
-        console.log("📤 Uploading to presigned URL…", uploadUrl);
 
         const uploadRes = await fetch(uploadUrl, {
           method: "PUT",
@@ -313,19 +295,12 @@ export default function CompanyDetails({
           },
         });
 
-        console.log("📤 S3 PUT status:", uploadRes.status);
-
         if (!uploadRes.ok) {
-          const errorText = await uploadRes.text();
-          console.error("❌ Upload failed:", errorText);
           toast.error(`Failed to upload ${file.name}: ${uploadRes.status}`);
           return;
         }
 
-        const objectUrl =
-          `https://company-attachments-bucket.s3.eu-north-1.amazonaws.com/` +
-          encodeURIComponent(key);
-        console.log("    ↩️  Successfully uploaded; objectUrl:", objectUrl);
+        const objectUrl = buildPublicS3ObjectUrl(key);
 
         uploadedAttachments.push({ name: fileName, url: objectUrl, key });
       }
@@ -336,7 +311,6 @@ export default function CompanyDetails({
         ),
         ...uploadedAttachments,
       ];
-      console.log("🔗  finalAttachments to send:", finalAttachments);
 
       const payload: CompanyDetailsData = {
         company_name: values.company_name,
@@ -354,24 +328,19 @@ export default function CompanyDetails({
         attachments: finalAttachments,
       };
 
-      console.log("▶️  POST payload to /api/company:", JSON.stringify(payload));
-
       const res = await fetch("/api/company", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
-      console.log("↩️  POST /api/company status:", res.status);
 
       if (!res.ok) {
-        const errText = await res.text().catch(() => "(no text)");
-        console.error("❌  Failed to save company data:", errText);
         toast.error("Failed to save. Try again.");
         setIsSaving(false);
         return;
       }
 
-      console.log("✅  Company details + attachments saved successfully");
       toast.success("Company details saved successfully!");
       setFilesToUpload([]);
       try {
@@ -382,7 +351,7 @@ export default function CompanyDetails({
       router.refresh();
       setExistingAttachments(finalAttachments);
     } catch (err) {
-      console.error("❌  Form submission error:", err);
+      console.error("Company details save error:", err);
       toast.error("Failed to save. Try again.");
     } finally {
       setIsSaving(false);
@@ -509,6 +478,7 @@ export default function CompanyDetails({
                           const response = await fetch("/api/generate-company-background", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
+                            credentials: "include",
                             body: JSON.stringify({
                               company_name: formValues.company_name,
                               website_url: formValues.website_url,
@@ -746,7 +716,7 @@ export default function CompanyDetails({
         </Form>
       </div>
 
-      <div className="bg-[#0F0F0F]/80 backdrop-blur-xs pt-4 pb-6 md:pb-8">
+      <div className="shrink-0 border-t border-white/[0.06] bg-[#0F0F0F] pt-4 pb-6 md:pb-8">
         <div className="w-full px-8 flex justify-between gap-4">
           <Button
             onClick={form.handleSubmit(onSubmit)}

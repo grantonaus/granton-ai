@@ -47,7 +47,7 @@ export default function GrantTestSubscriptionPage() {
   };
 
   return (
-    <div className="w-full min-h-screen bg-[#0F0F0F] flex items-center justify-center p-4">
+    <div className="flex h-full min-h-0 w-full flex-1 items-center justify-center bg-[#0F0F0F] p-4">
       <div className="max-w-md w-full bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] p-8 space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold text-white">

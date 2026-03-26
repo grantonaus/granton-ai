@@ -142,10 +142,10 @@ export async function GET(req: NextRequest) {
     await createSession(user.id);
 
     // Get callback URL from state
-    let callbackUrl = "/new-application";
+    let callbackUrl = "/grant-database";
     try {
       const stateData = JSON.parse(Buffer.from(state, "base64url").toString());
-      callbackUrl = stateData.callbackUrl || "/new-application";
+      callbackUrl = stateData.callbackUrl || "/grant-database";
     } catch (e) {
       // Use default if state parsing fails
     }

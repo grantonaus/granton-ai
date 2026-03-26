@@ -6,7 +6,7 @@ const BASE_URL = process.env.NEXTAUTH_URL || process.env.BETTER_AUTH_URL || "htt
 
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
-  const callbackUrl = searchParams.get("callbackUrl") || "/new-application";
+  const callbackUrl = searchParams.get("callbackUrl") || "/grant-database";
 
   // Generate state for CSRF protection
   const state = Buffer.from(JSON.stringify({ callbackUrl })).toString("base64url");

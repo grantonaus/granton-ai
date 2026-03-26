@@ -38,7 +38,7 @@ const SignUpForm = () => {
   const router = useRouter();
 
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/new-application";
+  const callbackUrl = searchParams.get("callbackUrl") || "/grant-database";
 
   const form = useForm<SignUpData>({
     resolver: zodResolver(SignUpSchema),

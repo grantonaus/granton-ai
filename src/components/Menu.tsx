@@ -24,11 +24,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useEffect, useState } from "react";
-import React from 'react';
-import { getMenuList, RecentApp } from "@/constants/menuList";
+import { useState } from "react";
+import React from "react";
+import { getMenuList } from "@/constants/menuList";
 import { ExpandableLinkMenu } from "./ExpandableLinkMenu";
-import { useCurrentUser } from "@/hooks/user";
 
 interface MenuProps {
   isOpen: boolean | undefined;
@@ -46,38 +45,9 @@ export function Menu({
   isSubscribed = false,
 }: MenuProps) {
   const pathname = usePathname();
-  const { session } = useCurrentUser();
-
-
-  const [recentApps, setRecentApps] = useState<RecentApp[]>([]);
-  const [loadingApps, setLoadingApps] = useState(true);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
 
-  useEffect(() => {
-    async function loadRecentApps() {
-      setLoadingApps(true);
-      try {
-        const res = await fetch("/api/applications");
-        if (!res.ok) {
-          console.error("Failed to fetch applications:", res.status);
-          return;
-        }
-        const json = await res.json();
-        // API gives you { applications: [...] }
-        if (Array.isArray(json.applications)) {
-          setRecentApps(json.applications as RecentApp[]);
-        }
-      } catch (err) {
-        console.error("Error fetching applications:", err);
-      } finally {
-        setLoadingApps(false);
-      }
-    }
-
-    loadRecentApps();
-  }, [session?.user?.id]);
-
-  const menuList = getMenuList(pathname, recentApps);
+  const menuList = getMenuList(pathname);
 
 
   return (
@@ -109,9 +79,8 @@ export function Menu({
               )}
               {menus.map(
                 ({ href, label, icon: Icon, active, submenus }, index) => {
-                  // In mobile (when onLinkClick is provided), render "Past Applications" as simple link without submenu
                   const isMobile = onLinkClick !== undefined;
-                  const shouldRenderAsSimpleLink = submenus.length === 0 || (isMobile && label === "Past Applications");
+                  const shouldRenderAsSimpleLink = submenus.length === 0;
                   
                   return shouldRenderAsSimpleLink ? (
                     <div className="w-full" key={index}>

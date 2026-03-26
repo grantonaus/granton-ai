@@ -1,10 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import fetch from "node-fetch";
 import * as cheerio from "cheerio";
 import pdfParse from "pdf-parse";
 import { openai } from "@ai-sdk/openai";
 import { generateObject, streamText } from "ai";
+import { requireAuth } from "@/lib/api-auth";
+import { rateLimit } from "@/lib/rate-limit";
+import {
+  assertContentLengthOk,
+  assertFileSizeOk,
+  assertUrlSafeForServerFetch,
+  MAX_FORM_FILE_BYTES,
+} from "@/lib/url-safety";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -41,25 +49,30 @@ async function fixAndValidateUrl(
   const trimmed = raw.trim();
   if (!trimmed) return null;
 
-  // 🅰️  Already looks like a full URL?
+  const candidates: string[] = [];
   try {
-    const u = new URL(trimmed);
-    if (!probe) return u.href;
-    if (await isReachable(u)) return u.href;
-  } catch { /* fall through */ }
-
-  // 🅱️  Missing scheme → try https:// + http://
+    candidates.push(new URL(trimmed).href);
+  } catch {
+    /* fall through */
+  }
   for (const scheme of ["https://", "http://"]) {
     try {
-      const candidate = new URL(scheme + trimmed);
-      if (!probe) return candidate.href;
-      if (await isReachable(candidate)) return candidate.href;
+      candidates.push(new URL(scheme + trimmed).href);
     } catch {
-      /* ignore, keep looping */
+      /* ignore */
     }
   }
 
-  // 🅾️  Everything failed
+  for (const href of candidates) {
+    try {
+      await assertUrlSafeForServerFetch(href);
+    } catch {
+      continue;
+    }
+    const u = new URL(href);
+    if (!probe) return u.href;
+    if (await isReachable(u)) return u.href;
+  }
   return null;
 }
 
@@ -83,8 +96,9 @@ async function isReachable(u: URL): Promise<boolean> {
 
 
 async function extractTextFromWeb(url: string): Promise<string> {
-  console.log(`[extractTextFromWeb] Fetching URL: ${url}`);
-  const res = await fetch(url);
+  const safe = await assertUrlSafeForServerFetch(url);
+  console.log(`[extractTextFromWeb] Fetching URL: ${safe.href}`);
+  const res = await fetch(safe.href);
   if (!res.ok) {
     const msg = `Failed to fetch ${url} (status ${res.status})`;
     console.error(`[extractTextFromWeb] ${msg}`);
@@ -103,6 +117,7 @@ async function extractTextFromWeb(url: string): Promise<string> {
 
 
 async function extractTextFromPDF(file: File): Promise<string> {
+  assertFileSizeOk(file, MAX_FORM_FILE_BYTES);
   console.log(`[extractTextFromPDF] Parsing PDF: ${file.name} (${file.size} bytes)`);
   const buffer = Buffer.from(await file.arrayBuffer());
   const parsed = await pdfParse(buffer);
@@ -112,8 +127,9 @@ async function extractTextFromPDF(file: File): Promise<string> {
 }
 
 async function extractTextFromPdfUrl(url: string): Promise<string> {
-  console.log(`[extractTextFromPdfUrl] Fetching PDF URL: ${url}`);
-  const res = await fetch(url);
+  const safe = await assertUrlSafeForServerFetch(url);
+  console.log(`[extractTextFromPdfUrl] Fetching PDF URL: ${safe.href}`);
+  const res = await fetch(safe.href);
   if (!res.ok) {
     throw new Error(`Failed to fetch PDF at ${url} (status ${res.status})`);
   }
@@ -135,7 +151,20 @@ function cleanExtractedText(raw: string): string {
 }
 
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request);
+  if (!auth.ok) return auth.response;
+
+  assertContentLengthOk(request, 50 * 1024 * 1024);
+
+  const rl = rateLimit(`extract_questions:${auth.user.id}`, 40, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
+  }
+
   console.log("[/api/extract_questions_chat] → Received request");
 
   let messages: { role: "system" | "user" | "assistant"; content: string }[] = [];

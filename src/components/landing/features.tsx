@@ -1,36 +1,49 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FileText, Database, Zap } from "lucide-react";
+import { FileText, Database, Zap, ListChecks } from "lucide-react";
+import { FEATURE_GRANT_WRITER_ENABLED } from "@/constants/feature-flags";
 
-const features = [
-    {
-        icon: FileText,
-        tag: "AI Technology",
-        title: "AI Grant Writer",
-        description:
-            "Generate professional grant applications tailored to each opportunity using our advanced AI writer that understands grant requirements and your business profile.",
-    },
+const grantWriterFeature = {
+    icon: FileText,
+    tag: "AI Technology",
+    title: "AI Grant Writer",
+    description:
+        "Generate professional grant applications tailored to each opportunity using our advanced AI writer that understands grant requirements and your business profile.",
+};
+
+const shortlistFeature = {
+    icon: ListChecks,
+    tag: "Your workflow",
+    title: "Shortlist & deadlines",
+    description:
+        "Save grants you care about, see eligibility at a glance, and track closing dates so nothing slips through while you prepare outside the app.",
+};
+
+const coreFeatures = [
     {
         icon: Database,
-        tag: "Complete Coverage",
-        title: "Grant Database",
+        tag: "Complete coverage",
+        title: "Grant database",
         description:
-            "Access to 200+ Australian government grants, updated daily with new opportunities, closing dates, and detailed eligibility requirements.",
+            "Access to 200+ Australian government grants, updated with new opportunities, closing dates, and detailed eligibility requirements.",
     },
     {
         icon: Zap,
-        tag: "Smart Matching",
-        title: "AI-Powered Matches",
+        tag: "Smart matching",
+        title: "AI-powered matches",
         description:
-            "Our intelligent algorithm analyzes your business profile to find the most relevant grants from federal and state databases in seconds.",
+            "Our system scores opportunities against your business profile so you see federal and state grants that fit—not a random list.",
     },
 ];
 
+const features = FEATURE_GRANT_WRITER_ENABLED
+    ? [grantWriterFeature, ...coreFeatures]
+    : [shortlistFeature, ...coreFeatures];
+
 export default function FeaturesSection() {
     return (
-        <section className="relative w-full overflow-hidden flex flex-col items-center text-center px-5 py-24">
-
+        <section className="relative flex w-full flex-col items-center overflow-hidden bg-[#0E0E0E] px-6 py-28 text-center sm:px-8 md:py-32">
             {/* Headline */}
             {/* <motion.div
           className="text-center max-w-3xl mx-auto"
@@ -55,108 +68,75 @@ export default function FeaturesSection() {
         </motion.div> */}
 
 
-            <motion.div
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="shadow-[0_0_18px_rgba(104,252,242,0.15)] mx-auto mb-8 text-md flex max-w-fit items-center justify-center space-x-2 overflow-hidden rounded-full border border-[#68FCF2]/20 bg-[#191C1C] px-3 py-1 transition-all"
-            >
-                <span className="text-md font-bold text-[#24bbb1]">Powerful Features</span>
-            </motion.div>
+            <div className="mx-auto max-w-xl text-center">
+                <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="shadow-[0_0_18px_rgba(104,252,242,0.15)] mx-auto mb-8 flex max-w-fit items-center justify-center space-x-2 overflow-hidden rounded-full border border-[#68FCF2]/20 bg-[#191C1C] px-3 py-1 transition-all"
+                >
+                    <span className="text-md font-bold text-[#24bbb1]">
+                        Powerful features
+                    </span>
+                </motion.div>
 
+                <motion.h2
+                    initial={{ opacity: 0, y: -12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.7 }}
+                    className="mt-2 text-5xl font-bold tracking-tight text-white sm:text-6xl"
+                >
+                    Everything you need to{" "}
+                    <span className="text-[#68FCF2] drop-shadow-[0_0_12px_rgba(104,252,242,0.35)]">
+                        win grants
+                    </span>
+                </motion.h2>
+            </div>
 
-            <motion.h1
-                initial={{ opacity: 0, y: -12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7 }}
-                className="mt-2 text-5xl font-bold tracking-tight text-white sm:text-6xl"
-            >
-                Everything you need to{" "}
-                <span className="text-[#77F7CF]">win grants</span>
-            </motion.h1>
-
-            {/* Subtext */}
             <motion.p
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.15 }}
-                className="mt-6 max-w-3xl font-medium text-[19px] sm:text-xl text-[#8e8e8e] sm:leading-normal"
+                className="mx-auto mt-6 max-w-2xl font-medium text-[19px] text-[#8e8e8e] sm:text-xl sm:leading-normal drop-shadow-[0_2px_10px_rgba(0,0,0,0.2)]"
             >
-                Our comprehensive platform combines cutting-edge technology with
-                expert knowledge to give you the best chance of securing funding.
+                {FEATURE_GRANT_WRITER_ENABLED
+                    ? "Search, match, and draft from one place—built around Australian programs."
+                    : "Search and match Australian grants from one place—database, scoring, and a clear path to what you’ll apply for."}
             </motion.p>
 
             {/* Feature Cards */}
-            <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3 w-full max-w-6xl mx-auto">
+            <div className="mx-auto mt-16 grid w-full max-w-6xl grid-cols-1 gap-6 md:mt-20 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
                 {features.map((item, index) => {
                     const Icon = item.icon;
+                    const tone =
+                        index === 0
+                            ? "border-[#68FCF2]/12 bg-[#0c1010]"
+                            : index === 1
+                              ? "border-white/[0.07] bg-[#101010]"
+                              : "border-white/[0.07] bg-[#0e0e0e]";
 
                     return (
                         <motion.div
                             key={index}
-                            initial={{ opacity: 0, y: 0 }}
+                            initial={{ opacity: 0, y: 8 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
-                            transition={{ duration: 0.4, delay: index * 0.08 }}
-                            whileHover={{
-                                boxShadow: "0px 20px 50px rgba(0,0,0,0.55)", // deeper shadow
-                                borderColor: "rgba(255,255,255,0.15)",       // border brighten
-                            }}
-                            className="
-                                relative group
-                                flex flex-col items-start
-                                rounded-lg p-7
-                                bg-[#0C0C0C]
-                                border border-white/10
-                                shadow-2xl
-                                overflow-hidden
-                                transition-all duration-300
-                            "
+                            transition={{ duration: 0.35, delay: index * 0.06 }}
+                            className={`group flex flex-col items-start rounded-xl border p-6 transition-colors duration-200 hover:border-white/[0.12] sm:p-8 ${tone}`}
                         >
-
-                            {/* Teal accent stripe */}
-                            <div className="
-                                absolute left-0 top-0 h-full w-[3px]
-                                bg-gradient-to-b from-[#77F7CF] to-transparent opacity-70
-                            " />
-
-                            {/* Inner glow */}
-                            <div className="
-                                absolute inset-0 
-                                bg-gradient-to-br from-[#77F7CF]/5 via-transparent to-transparent 
-                                opacity-40 blur-xl
-                            " />
-
-                            {/* Diagonal Light Streak */}
-                            <div className="
-                                absolute -top-10 -right-10 rotate-45
-                                w-40 h-[2px]
-                                bg-gradient-to-r from-transparent via-[#77F7CF]/40 to-transparent
-                                opacity-0 group-hover:opacity-100
-                                transition-all duration-700
-                            " />
-
-                            {/* Icon */}
-                            <div className="relative w-12 h-12 rounded-xl bg-[#0f1a16] flex items-center justify-center mb-5">
-                                <div className="absolute inset-0 rounded-xl bg-[#77F7CF]/20 blur-lg"></div>
-                                <Icon className="relative text-[#77F7CF]" size={24} />
+                            <div className="mb-6 flex h-10 w-10 items-center justify-center rounded-md border border-[#68FCF2]/18 bg-[#68FCF2]/[0.05] text-[#8ae8df] sm:h-11 sm:w-11">
+                                <Icon className="size-5 sm:size-[22px]" strokeWidth={1.75} aria-hidden />
                             </div>
 
-                            {/* Tag */}
-                            <span className="
-                                text-xs md:text-sm font-medium px-2 py-1 rounded-md
-                                bg-white/5 border border-white/10 text-[#77F7CF]
-                            ">
+                            <span className="rounded border border-white/[0.06] bg-white/[0.02] px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">
                                 {item.tag}
                             </span>
 
-                            {/* Title (left aligned) */}
-                            <h3 className="mt-3 text-xl font-semibold text-white tracking-tight text-left w-full">
+                            <h3 className="mt-4 w-full text-left text-xl font-semibold tracking-tight text-white">
                                 {item.title}
                             </h3>
 
-                            {/* Description */}
-                            <p className="mt-2 text-[16px] text-gray-400 font-medium text-left leading-relaxed">
+                            <p className="mt-3 text-left text-base font-medium leading-relaxed text-gray-400 sm:text-[17px]">
                                 {item.description}
                             </p>
                         </motion.div>

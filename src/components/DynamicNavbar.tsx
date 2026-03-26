@@ -5,8 +5,6 @@ import { Navbar } from "./Navbar";
 
 // Map routes to page titles
 const routeTitles: Record<string, string> = {
-  "/new-application": "New Application",
-  "/past-applications": "Past Applications",
   "/company-details": "Company Details",
   "/personal-details": "Personal Details",
   "/matching-grants": "Matching Grants",

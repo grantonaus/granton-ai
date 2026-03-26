@@ -4,6 +4,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import * as cheerio from "cheerio";
 import fetch from "node-fetch";
+import { requireAuth } from "@/lib/api-auth";
+import { rateLimit } from "@/lib/rate-limit";
+import {
+  assertContentLengthOk,
+  assertUrlSafeForServerFetch,
+  MAX_JSON_BODY_BYTES,
+} from "@/lib/url-safety";
 
 const RequestSchema = z.object({
   company_name: z.string().optional(),
@@ -20,15 +27,15 @@ const RequestSchema = z.object({
 // Helper function to extract text from website
 async function extractTextFromWeb(url: string): Promise<string> {
   try {
-    // Ensure URL has protocol
     const fullUrl = url.startsWith("http") ? url : `https://${url}`;
-    
-    console.log("Fetching website content from:", fullUrl);
-    
+    const safe = await assertUrlSafeForServerFetch(fullUrl);
+
+    console.log("Fetching website content from:", safe.href);
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
-    const response = await fetch(fullUrl, {
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(safe.href, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; GrantOn/1.0; +https://granton.io)",
       },
@@ -69,6 +76,23 @@ async function extractTextFromWeb(url: string): Promise<string> {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request);
+  if (!auth.ok) return auth.response;
+
+  try {
+    assertContentLengthOk(request, MAX_JSON_BODY_BYTES);
+  } catch {
+    return NextResponse.json({ error: "Request body too large" }, { status: 413 });
+  }
+
+  const rl = rateLimit(`generate_company_background:${auth.user.id}`, 30, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
+  }
+
   try {
     const body = await request.json();
     const parsed = RequestSchema.safeParse(body);
@@ -180,10 +204,10 @@ Requirements:
       { company_background: generatedText },
       { status: 200 }
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error generating company background:", err);
     return NextResponse.json(
-      { error: "Failed to generate company background", details: err.message },
+      { error: "Failed to generate company background" },
       { status: 500 }
     );
   }

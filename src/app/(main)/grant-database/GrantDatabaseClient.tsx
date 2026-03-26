@@ -157,10 +157,14 @@ export default function GrantDatabaseClient({
   };
 
   return (
-    <div className="w-full min-h-full bg-[#0F0F0F] overscroll-none mt-0">
-      <Tabs value={tab} onValueChange={setTab} className="w-full">
+    <div className="mt-0 flex h-full min-h-0 w-full flex-1 flex-col overscroll-none bg-[#0F0F0F]">
+      <Tabs
+        value={tab}
+        onValueChange={setTab}
+        className="flex min-h-0 w-full flex-1 flex-col"
+      >
         {/* Tabs + Filters */}
-        <div className="sticky top-0 z-30 bg-[#0d0d0d] pt-0 pb-4 lg:pt-4 px-5 overscroll-none">
+        <div className="z-30 shrink-0 bg-[#0d0d0d] px-5 pb-4 pt-0 lg:pt-4">
           <TabsList className="w-full border mb-4">
             <TabsTrigger value="available" className="flex-1 relative">
               Available Grants
@@ -226,7 +230,8 @@ export default function GrantDatabaseClient({
         </div>
 
         {/* Results */}
-        <TabsContent value="available" className="mt-1 px-5 pt-2">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+        <TabsContent value="available" className="mt-1 px-5 pt-2 focus-visible:outline-none">
           {filtered.length === 0 ? (
             <p className="text-muted-foreground">No grants found.</p>
           ) : (
@@ -269,6 +274,7 @@ export default function GrantDatabaseClient({
             </div>
           )}
         </TabsContent>
+        </div>
       </Tabs>
     </div>
   );

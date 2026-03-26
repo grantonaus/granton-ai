@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/user";
 import { isUserPremium } from "@/app/actions/premium";
 import UpgradePrompt from "@/components/UpgradePrompt";
+import { buildPublicS3ObjectUrl } from "@/lib/s3-public-url";
 
 interface FinaliseProps {
   applicationText: string;
@@ -135,7 +136,8 @@ export default function Finalise({ applicationText, applicationTitle, isProUser 
           const safeName = applicationTitle.replace(/\s+/g, "_").slice(0, 50);
           const fileName = `${safeName}_${session.user.id}_${Date.now()}.pdf`;
           const presignRes = await fetch(
-            `/api/s3-upload-url?fileName=${encodeURIComponent(fileName)}&userId=${session.user.id}`
+            `/api/s3-upload-url?fileName=${encodeURIComponent(fileName)}`,
+            { credentials: "include" }
           );
           if (!presignRes.ok) throw new Error("Failed to get upload URL");
           const { uploadUrl, key } = await presignRes.json();
@@ -147,10 +149,7 @@ export default function Finalise({ applicationText, applicationTitle, isProUser 
           });
           if (!uploadRes.ok) throw new Error("Failed to upload PDF");
 
-          const pdfUrl =
-            `https://company-attachments-bucket.s3.eu-north-1.amazonaws.com/${encodeURIComponent(
-              key
-            )}`;
+          const pdfUrl = buildPublicS3ObjectUrl(key);
 
           // record in DB
           const createRes = await fetch("/api/applications", {
@@ -188,7 +187,7 @@ export default function Finalise({ applicationText, applicationTitle, isProUser 
   // Show loading state while checking subscription
   if (isChecking) {
     return (
-      <div className="flex flex-col h-[calc(100vh-200px)] max-w-[1200px] mx-auto w-full items-center justify-center">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1200px] flex-1 flex-col items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
       </div>
     );
@@ -197,7 +196,7 @@ export default function Finalise({ applicationText, applicationTitle, isProUser 
   // If not subscribed, show upgrade prompt instead of application
   if (!isPaid) {
     return (
-      <div className="flex flex-col h-[calc(100vh-200px)] max-w-[1200px] mx-auto w-full">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-[1200px] flex-1 flex-col items-center justify-center">
         <UpgradePrompt
           title="Upgrade to View Your Application"
           description="Subscribe to Pro to view and save your generated grant application"
@@ -207,23 +206,21 @@ export default function Finalise({ applicationText, applicationTitle, isProUser 
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-200px)] max-w-[1200px] mx-auto w-full">
-      <div
-        className="flex flex-col flex-1 w-full rounded-md border border-border bg-[#0E0E0E] overflow-hidden min-h-0"
-      >
-        <div className="flex-shrink-0 flex items-center px-4 py-3 border-b border-[#1C1C1C]">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1200px] flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border bg-[#0E0E0E]">
+        <div className="flex shrink-0 items-center border-b border-[#1C1C1C] px-4 py-3">
           <p className="text-[15px] font-bold text-white">Application Content</p>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 text-[15px] text-white tracking-normal min-h-0">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 text-[15px] tracking-normal text-white">
           <pre className="whitespace-pre-wrap">{applicationText}</pre>
         </div>
       </div>
 
-      <div className="flex-shrink-0 pt-4 pb-8">
+      <div className="shrink-0 border-t border-white/[0.06] bg-[#0F0F0F] pt-4 pb-6 md:pb-8">
         <Button
           type="button"
-          className="w-full h-10 font-black text-black bg-[#68FCF2] hover:bg-[#68FCF2]/80 cursor-pointer"
+          className="h-10 w-full cursor-pointer bg-[#68FCF2] font-black text-black hover:bg-[#68FCF2]/80"
           onClick={saveAsPdf}
         >
           Save as PDF

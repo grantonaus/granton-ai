@@ -26,7 +26,7 @@ export default function PricingSection({
         "Browse all available grants",
         "No AI matching",
       ],
-      href: "/new-application",
+      href: "/grant-database",
       paymentLink: undefined,
       highlight: false,
     },
@@ -42,7 +42,7 @@ export default function PricingSection({
         "Location-based matching",
         "Priority email support",
       ],
-      href: "/new-application",
+      href: "/grant-database",
       paymentLink: "/api/stripe/pro", // replace with your real link
       highlight: true,
     },

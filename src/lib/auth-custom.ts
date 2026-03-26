@@ -1,95 +1,15 @@
 import { cookies } from "next/headers";
 import { client } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { signJWT, verifyJWT as verifyJWTToken } from "./jwt";
+import { SESSION_COOKIE_NAME } from "./auth-constants";
 
-const SECRET_KEY = process.env.NEXTAUTH_SECRET || process.env.BETTER_AUTH_SECRET || "fallback-secret-key-change-in-production";
-const SESSION_COOKIE_NAME = "auth-session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
-// Simple JWT implementation using Web Crypto API
-function base64UrlEncode(str: string): string {
-  return Buffer.from(str)
-    .toString("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-}
-
-function base64UrlDecode(str: string): string {
-  // Add padding if needed
-  let base64 = str.replace(/-/g, "+").replace(/_/g, "/");
-  while (base64.length % 4) {
-    base64 += "=";
-  }
-  return Buffer.from(base64, "base64").toString();
-}
-
-async function signJWT(payload: Record<string, unknown>, expiresIn: number): Promise<string> {
-  const header = { alg: "HS256", typ: "JWT" };
-  const now = Math.floor(Date.now() / 1000);
-  const token = {
-    ...payload,
-    iat: now,
-    exp: now + expiresIn,
-  };
-
-  const encoder = new TextEncoder();
-  const headerB64 = base64UrlEncode(JSON.stringify(header));
-  const payloadB64 = base64UrlEncode(JSON.stringify(token));
-  const signatureInput = `${headerB64}.${payloadB64}`;
-
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(SECRET_KEY),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(signatureInput));
-  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-
-  return `${signatureInput}.${signatureB64}`;
-}
-
-export async function verifyJWT(token: string): Promise<Record<string, unknown> | null> {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-
-    const encoder = new TextEncoder();
-    const signatureInput = `${parts[0]}.${parts[1]}`;
-
-    const key = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(SECRET_KEY),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["verify"]
-    );
-
-    // Decode signature from base64url
-    let base64 = parts[2].replace(/-/g, "+").replace(/_/g, "/");
-    while (base64.length % 4) {
-      base64 += "=";
-    }
-    const signature = Uint8Array.from(Buffer.from(base64, "base64"));
-
-    const isValid = await crypto.subtle.verify("HMAC", key, signature, encoder.encode(signatureInput));
-    if (!isValid) return null;
-
-    const payload = JSON.parse(base64UrlDecode(parts[1]));
-    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
-      return null; // Token expired
-    }
-
-    return payload;
-  } catch (error) {
-    return null;
-  }
+export async function verifyJWT(
+  token: string
+): Promise<Record<string, unknown> | null> {
+  return verifyJWTToken(token);
 }
 
 export interface SessionUser {
@@ -126,7 +46,10 @@ export async function createSession(userId: string): Promise<string> {
     isOAuth: user.accounts.length > 0,
   };
 
-  const token = await signJWT(sessionData as unknown as Record<string, unknown>, SESSION_MAX_AGE);
+  const token = await signJWT(
+    sessionData as unknown as Record<string, unknown>,
+    SESSION_MAX_AGE
+  );
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
@@ -149,7 +72,7 @@ export async function getSession(): Promise<SessionUser | null> {
       return null;
     }
 
-    const payload = await verifyJWT(token);
+    const payload = await verifyJWTToken(token);
     if (!payload) return null;
     return payload as unknown as SessionUser;
   } catch (error) {
@@ -163,7 +86,10 @@ export async function deleteSession(): Promise<void> {
   cookieStore.delete(SESSION_COOKIE_NAME);
 }
 
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+export async function verifyPassword(
+  password: string,
+  hash: string
+): Promise<boolean> {
   return await bcrypt.compare(password, hash);
 }
 

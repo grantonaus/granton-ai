@@ -1,8 +1,8 @@
-import { getSession, type SessionUser, verifyJWT } from "./auth-custom";
+import { getSession, type SessionUser } from "./auth-custom";
+import { verifyJWT } from "./jwt";
+import { SESSION_COOKIE_NAME } from "./auth-constants";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
-
-const SESSION_COOKIE_NAME = "auth-session";
 
 // Helper to get session from cookies (works in both server components and API routes)
 async function getSessionFromCookies(cookieHeader?: string | null): Promise<SessionUser | null> {

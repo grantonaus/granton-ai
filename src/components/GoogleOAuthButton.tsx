@@ -10,7 +10,7 @@ type GoogleAuthButtonProps = {
 
 export const GoogleAuthButton = ({ method }: GoogleAuthButtonProps) => {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/new-application";
+  const callbackUrl = searchParams.get("callbackUrl") || "/grant-database";
 
   const handleClick = () => {
     // Redirect to Google OAuth initiation endpoint

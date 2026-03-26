@@ -2,6 +2,8 @@
  * Utility functions for handling file uploads to S3
  */
 
+import { buildPublicS3ObjectUrl } from "./s3-public-url";
+
 export interface Attachment {
   name: string;
   url: string;
@@ -11,15 +13,11 @@ export interface Attachment {
 /**
  * Uploads a file to S3 using a presigned URL
  */
-async function uploadFileToS3(
-  file: File,
-  userId: string
-): Promise<Attachment | null> {
+async function uploadFileToS3(file: File): Promise<Attachment | null> {
   try {
     const presignRes = await fetch(
-      `/api/s3-upload-url?fileName=${encodeURIComponent(
-        file.name
-      )}&userId=${encodeURIComponent(userId)}`
+      `/api/s3-upload-url?fileName=${encodeURIComponent(file.name)}`,
+      { credentials: "include" }
     );
 
     if (!presignRes.ok) {
@@ -40,9 +38,7 @@ async function uploadFileToS3(
       throw new Error(`S3 upload failed: ${text}`);
     }
 
-    const bucketName = process.env.NEXT_PUBLIC_S3_BUCKET_NAME;
-    const region = process.env.NEXT_PUBLIC_AWS_REGION;
-    const objectUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${encodeURIComponent(key)}`;
+    const objectUrl = buildPublicS3ObjectUrl(key);
 
     return { name: file.name, url: objectUrl, key };
   } catch (error) {
@@ -55,8 +51,7 @@ async function uploadFileToS3(
  * Processes and uploads new files, preserving existing attachments
  */
 export async function processAttachments(
-  attachments: Array<File | Attachment>,
-  userId: string
+  attachments: Array<File | Attachment>
 ): Promise<Attachment[]> {
   const newFiles: File[] = [];
   const existingAttachments: Attachment[] = [];
@@ -69,7 +64,7 @@ export async function processAttachments(
     }
   });
 
-  const uploadPromises = newFiles.map((file) => uploadFileToS3(file, userId));
+  const uploadPromises = newFiles.map((file) => uploadFileToS3(file));
   const uploadedResults = await Promise.all(uploadPromises);
   const uploadedAttachments = uploadedResults.filter(
     (att): att is Attachment => att !== null

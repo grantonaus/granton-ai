@@ -1,13 +1,10 @@
 import { ComponentType, SVGProps } from "react";
 import {
-  NewApplicationIcon,
   CompanyDetailsIcon,
-  PastApplicationsIcon,
   PersonalDetailsIcon,
   MatchingGrantsIcon,
   GrantDatabaseIcon
 } from "@/icons";
-import { Bookmark, GalleryVertical } from "lucide-react";
 
 export type RecentApp = {
   id: string;
@@ -28,29 +25,11 @@ type Menu = {
 
 type Group = { groupLabel: string; menus: Menu[] };
 
-export function getMenuList(
-  pathname: string,
-  recentApps: RecentApp[] = []
-): Group[] {
-  const topThree = recentApps.slice(0, 3);
-
-  const pastAppSubmenus: Submenu[] = topThree.map((app) => ({
-    href: app.fileUrl,
-    label: app.title, 
-    active: false
-  }));
-
+export function getMenuList(pathname: string): Group[] {
   return [
     {
       groupLabel: "",
       menus: [
-        {
-          href: "/new-application",
-          label: "New Application",
-          active: pathname.startsWith("/new-application"),
-          icon: NewApplicationIcon,
-          submenus: []
-        },
         {
           href: "/grant-database",
           label: "Grant Database",
@@ -78,13 +57,6 @@ export function getMenuList(
           active: pathname.startsWith("/company-details"),
           icon: CompanyDetailsIcon,
           submenus: []
-        },
-        {
-          href: "/past-applications",
-          label: "Past Applications",
-          active: pathname.startsWith("/past-applications"),
-          icon: PastApplicationsIcon,
-          submenus: pastAppSubmenus
         }
       ]
     }

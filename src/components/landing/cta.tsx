@@ -17,7 +17,7 @@ const CTA: React.FC = () => {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="]
+        className="
           relative mx-auto max-w-6xl px-8 py-20 rounded-xl
           border-2 border-white/10
           backdrop-blur-2xl
