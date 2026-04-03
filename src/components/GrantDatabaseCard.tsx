@@ -68,7 +68,7 @@ const GrantDatabaseCard = ({
       )}
     >
       {/* Action Buttons */}
-      <div className="absolute top-5 right-5 z-10 flex items-center gap-2">
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
         {/* Save Button */}
         <button
           onClick={(e) => {
@@ -80,11 +80,10 @@ const GrantDatabaseCard = ({
           }}
           disabled={isPending}
           className={cn(
-            "transition-all duration-200 p-1 rounded cursor-pointer",
-            "hover:scale-110",
+            "group/saved-heart transition-all duration-200 p-2 rounded-md cursor-pointer",
             isSaved 
-              ? "text-red-500 hover:text-red-400" 
-              : "text-white/60 hover:text-white",
+              ? "text-red-500 hover:text-red-400 bg-[#1f1d1d] hover:bg-[#222020]" 
+              : "text-white/60 hover:text-white bg-[#1d1b1b]/60 hover:bg-[#1d1c1c]",
             isPending && "opacity-100"
           )}
           title={isPending ? "Saving..." : isSaved ? "Remove from saved" : "Save grant"}
@@ -92,6 +91,7 @@ const GrantDatabaseCard = ({
           <Heart 
             className={cn(
               "size-5 transition-all duration-200",
+              // "group-hover/saved-heart:scale-110",
               isSaved && "fill-red-500"
             )} 
           />

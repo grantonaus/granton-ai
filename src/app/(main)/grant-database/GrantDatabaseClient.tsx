@@ -252,7 +252,7 @@ export default function GrantDatabaseClient({
           )}
         </TabsContent>
 
-        <TabsContent value="saved" className="mt-4 px-5 pt-2 lg:pt-4">
+        <TabsContent value="saved" className="mt-1 px-5 pt-2 focus-visible:outline-none">
           {saved.length === 0 ? (
             <p className="text-muted-foreground">You haven&apos;t saved anything yet.</p>
           ) : (

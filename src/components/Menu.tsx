@@ -24,10 +24,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
 import React from "react";
 import { getMenuList } from "@/constants/menuList";
 import { ExpandableLinkMenu } from "./ExpandableLinkMenu";
+import { UpgradePlanDialog } from "./UpgradePlanDialog";
+import { ManageSubscriptionButton } from "./ManageSubscriptionButton";
 
 interface MenuProps {
   isOpen: boolean | undefined;
@@ -45,7 +46,6 @@ export function Menu({
   isSubscribed = false,
 }: MenuProps) {
   const pathname = usePathname();
-  const [upgradeLoading, setUpgradeLoading] = useState(false);
 
   const menuList = getMenuList(pathname);
 
@@ -163,55 +163,34 @@ export function Menu({
                 className="relative flex flex-col w-full bg-[#151515] text-white p-4 rounded-xl"
               >
                 <h2 className="flex items-center font-black text-[20px] mb-2 tracking-tight">
-                  <span className="leading-none">GRANTON</span>
+                  <span className="leading-none">GRANTLY</span>
                   <Plus className="size-[13px]" strokeWidth={4} />
                 </h2>
                 <p className="text-[15px] font-medium leading-snug mb-4 text-white/60">
                   You&apos;re a premium member! Enjoy unlimited AI-powered grant matches, priority support, and exclusive features.
                 </p>
-                <Button
-                  className="bg-[#1b1b1b] text-white/50 font-bold h-11 rounded-lg text-[15px]"
-                  disabled
-                >
-                  Active
-                </Button>
+                <ManageSubscriptionButton
+                  className="w-full bg-black hover:bg-stone-900/80 transiton-all durat text-white hover:text-white font-bold h-11 rounded-lg cursor-pointer text-[15px]"
+                />
               </div>
             ) : (
               <div
                 className="relative flex flex-col w-full bg-[#68FCF2] text-black p-4 rounded-xl shadow-[0_0_20px_3px_rgba(104,252,242,0.5)]"
               >
                 <h2 className="flex flex-row items-center font-black text-[20px] mb-2 tracking-tight">
-                  <span className="leading-none">GRANTON</span> <Plus className="size-[13px]" strokeWidth={4} />
+                  <span className="leading-none">GRANTLY</span> <Plus className="size-[13px]" strokeWidth={4} />
                 </h2>
                 <p className="text-[15px] font-medium leading-snug mb-4">
                   Unlock AI-powered grant discovery. Get instant matches tailored to your business profile and funding goals.
                 </p>
-                <Button
-                  onClick={async () => {
-                    try {
-                      setUpgradeLoading(true);
-                      const response = await fetch('/api/subscribe', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ isAnnual: false }),
-                      });
-                      const data = await response.json();
-                      if (data.url) {
-                        window.location.href = data.url;
-                      } else {
-                        console.error('No checkout URL received');
-                      }
-                    } catch (error) {
-                      console.error('Error creating checkout:', error);
-                    } finally {
-                      setUpgradeLoading(false);
-                    }
-                  }}
-                  disabled={upgradeLoading}
-                  className="w-full bg-black hover:bg-black/80 text-white font-bold h-11 rounded-lg cursor-pointer text-[15px]"
-                >
-                  {upgradeLoading ? "Loading..." : "Upgrade"}
-                </Button>
+                <UpgradePlanDialog>
+                  <Button
+                    type="button"
+                    className="w-full bg-black hover:bg-black/80 text-white font-bold h-11 rounded-lg cursor-pointer text-[15px]"
+                  >
+                    Upgrade
+                  </Button>
+                </UpgradePlanDialog>
               </div>
             )}
           </li>
